@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Sidebar from "../components/Sidebar";
 import Header from "../components/Header";
 import HotelCard from "../components/HotelCard";
@@ -6,52 +6,96 @@ import HotelCard from "../components/HotelCard";
 export default function Hotels() {
   const [open, setOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
+  const [hotels, setHotels] = useState([]);
 
-  const [hotels, setHotels] = useState([
-    {
-      id: 1,
-      name: "Hôtel Lux",
-      location: "Paris",
-      description: "Hôtel 5 étoiles au cœur de Paris",
-      image: "https://source.unsplash.com/600x400/?luxury,hotel",
-    },
-    {
-      id: 2,
-      name: "Hôtel Ocean",
-      location: "Nice",
-      description: "Vue imprenable sur la mer Méditerranée",
-      image: "https://source.unsplash.com/600x401/?hotel,sea",
-    },
-    {
-      id: 3,
-      name: "Sky Palace",
-      location: "Dubaï",
-      description: "Hôtel futuriste avec vue panoramique",
-      image: "https://source.unsplash.com/600x402/?futuristic,hotel",
-    },
-  ]);
-
-  // Champs du formulaire modal
   const [newHotel, setNewHotel] = useState({
     name: "",
     location: "",
     description: "",
-    image: "",
+    images: [],
   });
 
-  const handleAddHotel = () => {
-    setModalOpen(true);
-  };
+  const API_URL = "http://127.0.0.1:8000/api";
+  const MEDIA_URL = "http://127.0.0.1:8000";
+  const token = localStorage.getItem("token");
 
-  const handleSubmit = (e) => {
+  // ----------------------------
+  // Charger les hôtels
+  // ----------------------------
+  useEffect(() => {
+    fetch(`${API_URL}/hotels/`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.status === "success") {
+          // ajouter URL complète aux images
+          const formatted = data.hotels.map((h) => ({
+            ...h,
+            images: h.images.map((img) => `${MEDIA_URL}${img}`),
+          }));
+          setHotels(formatted);
+        }
+      })
+      .catch((err) => console.error(err));
+  }, []);
+
+  // ----------------------------
+  // Ajouter un hôtel
+  // ----------------------------
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (!newHotel.name || !newHotel.location || !newHotel.description || !newHotel.image) {
+
+    if (
+      !newHotel.name ||
+      !newHotel.location ||
+      !newHotel.description ||
+      newHotel.images.length === 0
+    ) {
       alert("Veuillez remplir tous les champs");
       return;
     }
-    setHotels([...hotels, { id: Date.now(), ...newHotel }]);
-    setNewHotel({ name: "", location: "", description: "", image: "" });
-    setModalOpen(false);
+
+    const formData = new FormData();
+    formData.append("name", newHotel.name);
+    formData.append("location", newHotel.location);
+    formData.append("description", newHotel.description);
+    formData.append("price", 0);
+
+    newHotel.images.forEach((img) => {
+      formData.append("images", img);
+    });
+
+    try {
+      const res = await fetch(`${API_URL}/hotels/create/`, {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+        body: formData,
+      });
+
+      const data = await res.json();
+
+      if (data.status === "success") {
+        const hotelFormatted = {
+          ...data.hotel,
+          images: data.hotel.images.map((img) => `${MEDIA_URL}${img}`),
+        };
+
+        setHotels([...hotels, hotelFormatted]);
+        setModalOpen(false);
+        setNewHotel({
+          name: "",
+          location: "",
+          description: "",
+          images: [],
+        });
+      } else {
+        alert(data.error || "Erreur lors de l'ajout");
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Erreur serveur");
+    }
   };
 
   return (
@@ -62,35 +106,24 @@ export default function Hotels() {
         <Header title="Hôtels" open={open} setOpen={setOpen} />
 
         <main className="p-6 md:p-10">
-          {/* Title + Button */}
           <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-10 gap-4">
             <div>
-              <h1 className="text-3xl md:text-4xl font-extrabold text-white tracking-wide">
+              <h1 className="text-3xl md:text-4xl font-extrabold text-white">
                 Nos <span className="text-cyan-400">Hôtels</span>
               </h1>
-              <p className="text-white/60 mt-2 max-w-xl">
-                Découvrez et gérez vos établissements dans une interface
-                futuriste et premium.
+              <p className="text-white/60 mt-2">
+                Gestion des hôtels avec images locales
               </p>
             </div>
 
-            {/* Bouton Ajouter */}
             <button
-              onClick={handleAddHotel}
-              className="
-                px-6 py-3 rounded-xl
-                bg-gradient-to-r from-cyan-400 to-violet-500
-                text-white font-semibold
-                shadow-[0_0_30px_rgba(56,189,248,0.6)]
-                hover:scale-[1.05] hover:shadow-[0_0_40px_rgba(56,189,248,0.8)]
-                transition-all duration-300
-              "
+              onClick={() => setModalOpen(true)}
+              className="px-6 py-3 rounded-xl bg-gradient-to-r from-cyan-400 to-violet-500 text-white font-semibold"
             >
               + Ajouter un hôtel
             </button>
           </div>
 
-          {/* Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
             {hotels.map((hotel) => (
               <HotelCard key={hotel.id} hotel={hotel} />
@@ -99,67 +132,65 @@ export default function Hotels() {
         </main>
       </div>
 
-      {/* Modal */}
+      {/* MODAL */}
       {modalOpen && (
         <>
-          {/* Overlay */}
           <div
             className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
             onClick={() => setModalOpen(false)}
-          ></div>
+          />
 
-          {/* Modal content */}
-          <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2
-            w-full max-w-md bg-white/10 backdrop-blur-xl border border-white/10
-            rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.6)] p-8 z-50">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-white">Ajouter un hôtel</h2>
-              <button
-                className="text-white text-xl font-bold hover:text-red-400 transition"
-                onClick={() => setModalOpen(false)}
-              >
-                &times;
-              </button>
-            </div>
+          <div className="fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-md bg-white/10 backdrop-blur-xl border border-white/10 rounded-2xl p-8 z-50">
+            <h2 className="text-2xl font-bold text-white mb-6">
+              Ajouter un hôtel
+            </h2>
 
-            <form className="space-y-4" onSubmit={handleSubmit}>
+            <form onSubmit={handleSubmit} className="space-y-4">
               <input
                 type="text"
-                placeholder="Nom de l'hôtel"
-                className="w-full px-4 py-3 rounded-xl bg-white/10 text-white border border-white/20 placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-cyan-400/60 transition"
+                placeholder="Nom"
+                className="w-full px-4 py-3 rounded-xl bg-white/10 text-white border border-white/20"
                 value={newHotel.name}
-                onChange={(e) => setNewHotel({...newHotel, name: e.target.value})}
+                onChange={(e) =>
+                  setNewHotel({ ...newHotel, name: e.target.value })
+                }
               />
+
               <input
                 type="text"
                 placeholder="Localisation"
-                className="w-full px-4 py-3 rounded-xl bg-white/10 text-white border border-white/20 placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-cyan-400/60 transition"
+                className="w-full px-4 py-3 rounded-xl bg-white/10 text-white border border-white/20"
                 value={newHotel.location}
-                onChange={(e) => setNewHotel({...newHotel, location: e.target.value})}
+                onChange={(e) =>
+                  setNewHotel({ ...newHotel, location: e.target.value })
+                }
               />
-              <input
-                type="text"
+
+              <textarea
                 placeholder="Description"
-                className="w-full px-4 py-3 rounded-xl bg-white/10 text-white border border-white/20 placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-cyan-400/60 transition"
+                className="w-full px-4 py-3 rounded-xl bg-white/10 text-white border border-white/20"
                 value={newHotel.description}
-                onChange={(e) => setNewHotel({...newHotel, description: e.target.value})}
+                onChange={(e) =>
+                  setNewHotel({ ...newHotel, description: e.target.value })
+                }
               />
+
               <input
-                type="text"
-                placeholder="URL de l'image"
-                className="w-full px-4 py-3 rounded-xl bg-white/10 text-white border border-white/20 placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-cyan-400/60 transition"
-                value={newHotel.image}
-                onChange={(e) => setNewHotel({...newHotel, image: e.target.value})}
+                type="file"
+                multiple
+                accept="image/*"
+                className="w-full text-white"
+                onChange={(e) =>
+                  setNewHotel({
+                    ...newHotel,
+                    images: Array.from(e.target.files),
+                  })
+                }
               />
 
               <button
                 type="submit"
-                className="w-full py-3 rounded-xl font-semibold tracking-wide
-                  bg-gradient-to-r from-cyan-400 to-violet-500
-                  text-white
-                  hover:shadow-[0_0_30px_rgba(56,189,248,0.8)]
-                  hover:scale-[1.02]
-                  transition-all duration-300"
+                className="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-400 to-violet-500 text-white font-semibold"
               >
                 Ajouter
               </button>

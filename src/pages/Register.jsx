@@ -1,23 +1,52 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
+import api from "../services/api";
 
 export default function Register() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    if (name && email && password && confirm) {
-      if (password !== confirm) {
-        alert("Les mots de passe ne correspondent pas");
-        return;
-      }
+    setError("");
+
+    if (!name || !email || !password || !confirm) {
+      setError("Veuillez remplir tous les champs");
+      return;
+    }
+
+    if (password !== confirm) {
+      setError("Les mots de passe ne correspondent pas");
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const res = await api.post("/users/register/", {
+        name,
+        email,
+        password,
+      });
+
+      // 🔐 Sauvegarde token + user
+      localStorage.setItem("token", res.data.token);
+      localStorage.setItem("user", JSON.stringify(res.data.user));
+
       navigate("/dashboard");
-    } else {
-      alert("Veuillez remplir tous les champs");
+    } catch (err) {
+      setError(
+        err.response?.data?.error ||
+          "Erreur lors de l’inscription"
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -33,6 +62,13 @@ export default function Register() {
           Inscription <span className="text-cyan-400">Admin</span>
         </h1>
 
+        {/* ❌ Erreur */}
+        {error && (
+          <p className="text-red-400 text-sm text-center mb-4">
+            {error}
+          </p>
+        )}
+
         <form className="space-y-6" onSubmit={handleSubmit}>
           <input
             type="text"
@@ -41,6 +77,7 @@ export default function Register() {
             onChange={(e) => setName(e.target.value)}
             className="w-full px-4 py-3 rounded-xl bg-white/10 text-white border border-white/20 placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-cyan-400/60 focus:border-cyan-400 transition"
           />
+
           <input
             type="email"
             placeholder="Email"
@@ -48,6 +85,7 @@ export default function Register() {
             onChange={(e) => setEmail(e.target.value)}
             className="w-full px-4 py-3 rounded-xl bg-white/10 text-white border border-white/20 placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-cyan-400/60 focus:border-cyan-400 transition"
           />
+
           <input
             type="password"
             placeholder="Mot de passe"
@@ -55,6 +93,7 @@ export default function Register() {
             onChange={(e) => setPassword(e.target.value)}
             className="w-full px-4 py-3 rounded-xl bg-white/10 text-white border border-white/20 placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-cyan-400/60 focus:border-cyan-400 transition"
           />
+
           <input
             type="password"
             placeholder="Confirmer le mot de passe"
@@ -65,9 +104,10 @@ export default function Register() {
 
           <button
             type="submit"
-            className="w-full py-3 rounded-xl font-semibold tracking-wide bg-gradient-to-r from-cyan-400 to-violet-500 text-white hover:shadow-[0_0_30px_rgba(56,189,248,0.8)] hover:scale-[1.02] transition-all duration-300"
+            disabled={loading}
+            className="w-full py-3 rounded-xl font-semibold tracking-wide bg-gradient-to-r from-cyan-400 to-violet-500 text-white hover:shadow-[0_0_30px_rgba(56,189,248,0.8)] hover:scale-[1.02] transition-all duration-300 disabled:opacity-50"
           >
-            S’inscrire
+            {loading ? "Inscription..." : "S’inscrire"}
           </button>
         </form>
 

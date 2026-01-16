@@ -1,6 +1,22 @@
 import { FaBars } from "react-icons/fa";
+import { useState, useEffect } from "react";
 
 export default function Header({ title, open, setOpen }) {
+  const [userName, setUserName] = useState("Utilisateur");
+
+  // Récupérer le nom depuis localStorage
+  useEffect(() => {
+    const user = localStorage.getItem("user");
+    if (user) {
+      try {
+        const parsedUser = JSON.parse(user);
+        setUserName(parsedUser.name || "Utilisateur");
+      } catch (error) {
+        console.error("Erreur parsing user:", error);
+      }
+    }
+  }, []);
+
   return (
     <header
       className="
@@ -39,7 +55,7 @@ export default function Header({ title, open, setOpen }) {
           <span className="hidden sm:inline text-white/70 tracking-wide">
             Bienvenue,
             <span className="text-cyan-400 font-semibold ml-1">
-              Utilisateur
+              {userName}
             </span>
           </span>
 

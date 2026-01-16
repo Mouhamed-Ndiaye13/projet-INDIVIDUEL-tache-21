@@ -1,18 +1,44 @@
 import { Link, useNavigate } from "react-router-dom";
 import { useState } from "react";
+import api from "../services/api";
 
 export default function Login() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [error, setError] = useState("");
+  const [loading, setLoading] = useState(false);
+
   const navigate = useNavigate();
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setError("");
 
-    if (email && password) {
+    if (!email || !password) {
+      setError("Veuillez remplir tous les champs");
+      return;
+    }
+
+    try {
+      setLoading(true);
+
+      const res = await api.post("/users/login/", {
+        email,
+        password,
+      });
+
+      // 🔐 Sauvegarde du token
+      localStorage.setItem("token", res.data.token);
+      localStorage.setItem("user", JSON.stringify(res.data.user));
+
       navigate("/dashboard");
-    } else {
-      alert("Veuillez remplir tous les champs");
+    } catch (err) {
+      setError(
+        err.response?.data?.error ||
+          "Email ou mot de passe incorrect"
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -42,6 +68,13 @@ export default function Login() {
         <h1 className="text-3xl font-extrabold text-center text-white tracking-wide mb-8">
           Connexion <span className="text-cyan-400">Admin</span>
         </h1>
+
+        {/* ❌ Erreur */}
+        {error && (
+          <p className="text-red-400 text-sm text-center mb-4">
+            {error}
+          </p>
+        )}
 
         <form className="space-y-6" onSubmit={handleSubmit}>
           {/* Email */}
@@ -93,6 +126,7 @@ export default function Login() {
           {/* Button */}
           <button
             type="submit"
+            disabled={loading}
             className="
             w-full py-3 rounded-xl font-semibold tracking-wide
             bg-gradient-to-r from-cyan-400 to-violet-500
@@ -100,9 +134,10 @@ export default function Login() {
             hover:shadow-[0_0_30px_rgba(56,189,248,0.8)]
             hover:scale-[1.02]
             transition-all duration-300
+            disabled:opacity-50
             "
           >
-            Se connecter
+            {loading ? "Connexion..." : "Se connecter"}
           </button>
         </form>
 
