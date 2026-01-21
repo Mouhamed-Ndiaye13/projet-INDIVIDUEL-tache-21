@@ -6,7 +6,6 @@ from django.conf import settings
 import jwt
 from functools import wraps
 from users.models import User
-import datetime
 
 # Clé secrète pour JWT (mettre dans .env en prod)
 SECRET_KEY = os.getenv("SECRET_KEY", "changeme123")
@@ -48,46 +47,48 @@ def login_required(view_func):
 @csrf_exempt
 @login_required
 def create_hotel(request):
-    if request.method == "POST":
-        name = request.POST.get("name")
-        location = request.POST.get("location")
-        price = request.POST.get("price")
-        description = request.POST.get("description")
-        images_files = request.FILES.getlist("images")
+    if request.method != "POST":
+        return JsonResponse({"error": "Only POST allowed"}, status=405)
 
-        if not all([name, location, price, description]):
-            return JsonResponse({"error": "Missing fields"}, status=400)
+    name = request.POST.get("name")
+    location = request.POST.get("location")
+    price = request.POST.get("price")
+    description = request.POST.get("description")
+    images_files = request.FILES.getlist("images")
 
-        images_urls = []
-        for img in images_files:
-            img_path = os.path.join(settings.MEDIA_ROOT, img.name)
-            os.makedirs(os.path.dirname(img_path), exist_ok=True)
-            with open(img_path, "wb+") as f:
-                for chunk in img.chunks():
-                    f.write(chunk)
-            images_urls.append(f"/media/{img.name}")
+    if not all([name, location, price, description]):
+        return JsonResponse({"error": "Missing fields"}, status=400)
 
-        hotel = Hotel(
-            name=name,
-            location=location,
-            price=float(price),
-            description=description,
-            images=images_urls
-        )
-        hotel.save()
+    images_urls = []
+    upload_dir = os.path.join(settings.MEDIA_ROOT, "hotels")
+    os.makedirs(upload_dir, exist_ok=True)
 
-        return JsonResponse({
-            "status": "success",
-            "hotel": {
-                "name": name,
-                "location": location,
-                "price": price,
-                "description": description,
-                "images": images_urls
-            }
-        })
+    for img in images_files:
+        img_path = os.path.join(upload_dir, img.name)
+        with open(img_path, "wb+") as f:
+            for chunk in img.chunks():
+                f.write(chunk)
+        images_urls.append(f"/media/hotels/{img.name}")
 
-    return JsonResponse({"error": "Only POST allowed"}, status=405)
+    hotel = Hotel.objects.create(
+        name=name,
+        location=location,
+        price=float(price),
+        description=description,
+        images=images_urls
+    )
+
+    return JsonResponse({
+        "status": "success",
+        "hotel": {
+            "id": hotel.id,
+            "name": hotel.name,
+            "location": hotel.location,
+            "price": hotel.price,
+            "description": hotel.description,
+            "images": hotel.images
+        }
+    })
 
 
 # ---------------------------
@@ -96,11 +97,11 @@ def create_hotel(request):
 @csrf_exempt
 def list_hotels(request):
     if request.method == "GET":
-        hotels = Hotel.objects()
+        hotels = Hotel.objects.all()  # ✅ corrigé
         hotel_list = []
         for h in hotels:
             hotel_list.append({
-                "id": str(h.id),
+                "id": h.id,
                 "name": h.name,
                 "location": h.location,
                 "price": h.price,
@@ -140,17 +141,20 @@ def update_hotel(request, hotel_id):
         if hasattr(request, 'FILES'):
             images_files = request.FILES.getlist("images")
             images_urls = hotel.images if hotel.images else []
+            upload_dir = os.path.join(settings.MEDIA_ROOT, "hotels")
+            os.makedirs(upload_dir, exist_ok=True)
+
             for img in images_files:
-                img_path = os.path.join(settings.MEDIA_ROOT, img.name)
-                os.makedirs(os.path.dirname(img_path), exist_ok=True)
+                img_path = os.path.join(upload_dir, img.name)
                 with open(img_path, "wb+") as f:
                     for chunk in img.chunks():
                         f.write(chunk)
-                images_urls.append(f"/media/{img.name}")
+                images_urls.append(f"/media/hotels/{img.name}")
             hotel.images = images_urls
 
         hotel.save()
         return JsonResponse({"status": "success", "hotel": {
+            "id": hotel.id,
             "name": hotel.name,
             "location": hotel.location,
             "price": hotel.price,

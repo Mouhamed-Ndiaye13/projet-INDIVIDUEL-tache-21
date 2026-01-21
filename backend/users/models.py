@@ -1,6 +1,10 @@
-from mongoengine import Document, StringField, EmailField
+from django.db import models
 
-class User(Document):
-    name = StringField(required=True)
-    email = EmailField(required=True, unique=True)
-    password = StringField(required=True)
+
+class User(models.Model):
+    name = models.CharField(max_length=150)
+    email = models.EmailField(unique=True)
+    password = models.CharField(max_length=255)
+
+    def __str__(self):
+        return self.email
