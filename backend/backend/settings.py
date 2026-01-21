@@ -1,15 +1,26 @@
 from pathlib import Path
 import os
 from dotenv import load_dotenv
+import dj_database_url
 
+# -------------------------
+# Chargement des variables d'environnement
+# -------------------------
 load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 SECRET_KEY = os.getenv("SECRET_KEY", "dev_secret_key")
-DEBUG = True
-ALLOWED_HOSTS = ["*"]
+DEBUG = os.getenv("DEBUG", "True") == "True"
 
+# -------------------------
+# Hosts
+# -------------------------
+ALLOWED_HOSTS = ["*"]  # ou mettre les URLs Render de front et back
+
+# -------------------------
+# Applications installées
+# -------------------------
 INSTALLED_APPS = [
     "corsheaders",
     "django.contrib.contenttypes",
@@ -19,37 +30,50 @@ INSTALLED_APPS = [
     "bookings",
 ]
 
+# -------------------------
+# Middleware
+# -------------------------
 MIDDLEWARE = [
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
     "django.middleware.csrf.CsrfViewMiddleware",
 ]
 
+# -------------------------
+# CORS
+# -------------------------
 CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOWED_ORIGINS = [
+    "http://localhost:3000",  # Front local
+    "https://projet-individuel-tache-21.onrender.com",  # Backend Render
+]
 
+# -------------------------
+# URLs et WSGI
+# -------------------------
 ROOT_URLCONF = "backend.urls"
 WSGI_APPLICATION = "backend.wsgi.application"
 
+# -------------------------
+# Base de données
+# -------------------------
 DATABASES = {
-    "default": {
-        "ENGINE": "django.db.backends.postgresql",
-        "NAME": "hotel_db",
-        "USER": "postgres",
-        "PASSWORD": "Fessel2025",
-        "HOST": "localhost",
-        "PORT": "5432",
-    }
+    "default": dj_database_url.config(
+        default="postgres://postgres:Fessel2025@localhost:5432/hotel_db"
+    )
 }
 
+# -------------------------
+# Static et media
+# -------------------------
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
-# CORS
-CORS_ALLOW_CREDENTIALS = False  # ✅ obligatoire pour inclure les cookies
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",  # ton frontend React
-]
-CORS_ALLOW_CREDENTIALS = True  # ✅ autorise l'envoi de cookies ou tokens
+# -------------------------
+# Autres paramètres Django
+# -------------------------
+CORS_ALLOW_CREDENTIALS = True
