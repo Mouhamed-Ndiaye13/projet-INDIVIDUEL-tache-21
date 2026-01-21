@@ -22,58 +22,47 @@ export default function Login() {
     try {
       setLoading(true);
 
-      const res = await api.post("/users/login/", {
-        email,
-        password,
-      });
+      // 🔹 Appel API login
+      const res = await api.post("/users/login/", { email, password });
 
-      // 🔐 Sauvegarde du token
+      // Vérifier si le token est présent
+      if (!res.data.token) {
+        setError("Impossible de récupérer le token");
+        return;
+      }
+
+      // 🔐 Sauvegarde du token et info user
       localStorage.setItem("token", res.data.token);
       localStorage.setItem("user", JSON.stringify(res.data.user));
 
+      // Redirection vers le dashboard
       navigate("/dashboard");
     } catch (err) {
-      setError(
+      // Gestion d'erreur plus claire
+      const message =
         err.response?.data?.error ||
-          "Email ou mot de passe incorrect"
-      );
+        err.message ||
+        "Email ou mot de passe incorrect";
+      setError(message);
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div
-      className="
-      min-h-screen flex items-center justify-center
-      bg-gradient-to-br from-[#0b0f1a] to-[#0f172a]
-      relative overflow-hidden
-      "
-    >
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0b0f1a] to-[#0f172a] relative overflow-hidden">
       {/* Glow background */}
       <div className="absolute -top-32 -left-32 w-96 h-96 bg-cyan-400/20 blur-3xl rounded-full" />
       <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-violet-500/20 blur-3xl rounded-full" />
 
       {/* Card */}
-      <div
-        className="
-        relative z-10 w-full max-w-md
-        bg-white/10 backdrop-blur-xl
-        border border-white/10
-        rounded-2xl
-        shadow-[0_0_40px_rgba(0,0,0,0.6)]
-        p-8
-        "
-      >
+      <div className="relative z-10 w-full max-w-md bg-white/10 backdrop-blur-xl border border-white/10 rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.6)] p-8">
         <h1 className="text-3xl font-extrabold text-center text-white tracking-wide mb-8">
           Connexion <span className="text-cyan-400">Admin</span>
         </h1>
 
-        {/* ❌ Erreur */}
         {error && (
-          <p className="text-red-400 text-sm text-center mb-4">
-            {error}
-          </p>
+          <p className="text-red-400 text-sm text-center mb-4">{error}</p>
         )}
 
         <form className="space-y-6" onSubmit={handleSubmit}>
@@ -85,16 +74,7 @@ export default function Login() {
             <input
               type="email"
               placeholder="exemple@email.com"
-              className="
-              w-full px-4 py-3 rounded-xl
-              bg-white/10 text-white
-              border border-white/20
-              placeholder-white/40
-              focus:outline-none
-              focus:ring-2 focus:ring-cyan-400/60
-              focus:border-cyan-400
-              transition
-              "
+              className="w-full px-4 py-3 rounded-xl bg-white/10 text-white border border-white/20 placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-cyan-400/60 focus:border-cyan-400 transition"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
             />
@@ -108,16 +88,7 @@ export default function Login() {
             <input
               type="password"
               placeholder="••••••••"
-              className="
-              w-full px-4 py-3 rounded-xl
-              bg-white/10 text-white
-              border border-white/20
-              placeholder-white/40
-              focus:outline-none
-              focus:ring-2 focus:ring-cyan-400/60
-              focus:border-cyan-400
-              transition
-              "
+              className="w-full px-4 py-3 rounded-xl bg-white/10 text-white border border-white/20 placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-cyan-400/60 focus:border-cyan-400 transition"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
             />
@@ -127,15 +98,7 @@ export default function Login() {
           <button
             type="submit"
             disabled={loading}
-            className="
-            w-full py-3 rounded-xl font-semibold tracking-wide
-            bg-gradient-to-r from-cyan-400 to-violet-500
-            text-white
-            hover:shadow-[0_0_30px_rgba(56,189,248,0.8)]
-            hover:scale-[1.02]
-            transition-all duration-300
-            disabled:opacity-50
-            "
+            className="w-full py-3 rounded-xl font-semibold tracking-wide bg-gradient-to-r from-cyan-400 to-violet-500 text-white hover:shadow-[0_0_30px_rgba(56,189,248,0.8)] hover:scale-[1.02] transition-all duration-300 disabled:opacity-50"
           >
             {loading ? "Connexion..." : "Se connecter"}
           </button>
