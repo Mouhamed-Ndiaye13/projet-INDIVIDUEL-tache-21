@@ -15,7 +15,7 @@ export default function Hotels() {
     images: [],
   });
 
-  const API_URL = "http://127.0.0.1:8000/api";
+  const API_URL = "https://projet-individuel-tache-21.onrender.com/api";
   const MEDIA_URL = "http://127.0.0.1:8000";
 
   // ----------------------------

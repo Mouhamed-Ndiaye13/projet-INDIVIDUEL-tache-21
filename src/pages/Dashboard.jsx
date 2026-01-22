@@ -19,7 +19,7 @@ export default function Dashboard() {
     const fetchHotels = async () => {
       try {
         const token = localStorage.getItem("token"); // token stocké après login
-        const res = await fetch("http://127.0.0.1:8000/api/hotels/", {
+        const res = await fetch("https://projet-individuel-tache-21.onrender.com/api/hotels/", {
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`, // envoie le token pour sécuriser
