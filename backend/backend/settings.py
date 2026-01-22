@@ -61,14 +61,9 @@ WSGI_APPLICATION = "backend.wsgi.application"
 
 DATABASES = {
     "default": dj_database_url.config(
-        default=os.getenv(
-            "DATABASE_URL",
-            "postgres://postgres:Fessel2025@localhost:5432/hotel_db"
-        ),
-        conn_max_age=600
+        default=os.environ.get("DATABASE_URL", "postgresql://postgres:Fessel2025@localhost:5432/hotel_db")
     )
 }
-
 # -------------------------
 # Static et media
 # -------------------------
