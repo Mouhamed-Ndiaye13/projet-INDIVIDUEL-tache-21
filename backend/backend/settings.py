@@ -1,7 +1,8 @@
+import dj_database_url
 from pathlib import Path
 import os
 from dotenv import load_dotenv
-import dj_database_url
+
 
 # -------------------------
 # Chargement des variables d'environnement
@@ -58,15 +59,14 @@ WSGI_APPLICATION = "backend.wsgi.application"
 # -------------------------
 # Base de données PostgreSQL Render
 # -------------------------
+
 DATABASES = {
-    "default": dj_database_url.config(
-        default=os.environ.get(
-            "DATABASE_URL",
-            "postgresql://postgres_postgres_fessel2025atlocalhost_user:6spYUX7CdZBuHbsIeRQQIRmAVffsvOCo@dpg-d5oc9fggjchc73a0cihg-a/postgres_postgres_fessel2025atlocalhost"
-        )
+    "default": dj_database_url.parse(
+        "postgresql://postgres_postgres_fessel2025atlocalhost_user:6spYUX7CdZBuHbsIeRQQIRmAVffsvOCo@dpg-d5oc9fggjchc73a0cihg-a.oregon-postgres.render.com/postgres_postgres_fessel2025atlocalhost",
+        conn_max_age=600,
+        ssl_require=True
     )
 }
-
 # -------------------------
 # Static et media
 # -------------------------
