@@ -10,19 +10,13 @@ load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# -------------------------
-# Secret & Debug
-# -------------------------
 SECRET_KEY = os.getenv("SECRET_KEY", "dev_secret_key")
 DEBUG = os.getenv("DEBUG", "False") == "True"
 
 # -------------------------
-# Hosts autorisés
+# Hosts
 # -------------------------
-ALLOWED_HOSTS = [
-    "*",  # Tu peux mettre tes URLs Render ici pour plus de sécurité
-    "https://projet-individuel-tache-21.onrender.com",
-]
+ALLOWED_HOSTS = ["*"]  # Tu peux préciser les URLs du front et back Render
 
 # -------------------------
 # Applications installées
@@ -34,7 +28,6 @@ INSTALLED_APPS = [
     "users",
     "hotels",
     "bookings",
-    "rest_framework",
 ]
 
 # -------------------------
@@ -49,11 +42,11 @@ MIDDLEWARE = [
 # -------------------------
 # CORS
 # -------------------------
-CORS_ALLOW_ALL_ORIGINS = False
+CORS_ALLOW_ALL_ORIGINS = True
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",  # Front local
-    "https://projet-individuel-tache-21.onrender.com",  # Front deployé
+    "http://localhost:3000",  # Front local pour tests
+    "https://your-frontend-render-url",  # Remplace par ton front deployé
 ]
 
 # -------------------------
@@ -67,20 +60,18 @@ WSGI_APPLICATION = "backend.wsgi.application"
 # -------------------------
 DATABASES = {
     "default": dj_database_url.config(
-        default=os.environ.get("DATABASE_URL")  # Récupère DATABASE_URL de Render
+        default=os.environ.get(
+            "DATABASE_URL",
+            "postgresql://postgres_postgres_fessel2025atlocalhost_user:6spYUX7CdZBuHbsIeRQQIRmAVffsvOCo@dpg-d5oc9fggjchc73a0cihg-a/postgres_postgres_fessel2025atlocalhost"
+        )
     )
 }
 
 # -------------------------
-# Static & Media
+# Static et media
 # -------------------------
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
-
-# -------------------------
-# Autres paramètres
-# -------------------------
-CORS_ALLOW_CREDENTIALS = True
