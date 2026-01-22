@@ -43,13 +43,12 @@ MIDDLEWARE = [
 # -------------------------
 # CORS
 # -------------------------
-CORS_ALLOW_ALL_ORIGINS = True
-CORS_ALLOW_CREDENTIALS = True
+CORS_ALLOW_ALL_ORIGINS = False  # Ne pas laisser True en prod
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",  # Front local pour tests
-    "https://your-frontend-render-url",  # Remplace par ton front deployé
+    "http://localhost:3000",  # Front local
+    "https://projet-individuel-tache-21-32hu.vercel.app",  # Front prod
 ]
-
+CORS_ALLOW_CREDENTIALS = True  # Si tu utilises cookies ou auth
 # -------------------------
 # URLs et WSGI
 # -------------------------
