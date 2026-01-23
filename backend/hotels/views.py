@@ -42,6 +42,18 @@ def login_required(view_func):
 
 
 # ---------------------------
+# List Categories (public)
+# ---------------------------
+@csrf_exempt
+def list_categories(request):
+    if request.method == "GET":
+        categories = Category.objects.all()
+        cat_list = [{"id": c.id, "name": c.name} for c in categories]
+        return JsonResponse({"status": "success", "categories": cat_list})
+    return JsonResponse({"error": "Only GET allowed"}, status=405)
+
+
+# ---------------------------
 # Create Hotel with images
 # ---------------------------
 @csrf_exempt
@@ -58,7 +70,16 @@ def create_hotel(request):
     images_files = request.FILES.getlist("images")
 
     if not all([name, location, price, description, category_id]):
-        return JsonResponse({"error": "Missing fields"}, status=400)
+        return JsonResponse({
+            "error": "Missing fields",
+            "received": {
+                "name": name,
+                "location": location,
+                "price": price,
+                "description": description,
+                "category_id": category_id
+            }
+        }, status=400)
 
     try:
         category = Category.objects.get(id=category_id)
