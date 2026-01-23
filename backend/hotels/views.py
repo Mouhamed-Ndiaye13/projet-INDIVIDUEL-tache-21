@@ -1,6 +1,6 @@
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
-from .models import Hotel
+from .models import Hotel, HotelImage, Category
 import os
 from django.conf import settings
 import jwt
@@ -54,29 +54,34 @@ def create_hotel(request):
     location = request.POST.get("location")
     price = request.POST.get("price")
     description = request.POST.get("description")
+    category_id = request.POST.get("category")
     images_files = request.FILES.getlist("images")
 
-    if not all([name, location, price, description]):
+    if not all([name, location, price, description, category_id]):
         return JsonResponse({"error": "Missing fields"}, status=400)
 
-    images_urls = []
-    upload_dir = os.path.join(settings.MEDIA_ROOT, "hotels")
-    os.makedirs(upload_dir, exist_ok=True)
+    try:
+        category = Category.objects.get(id=category_id)
+    except Category.DoesNotExist:
+        return JsonResponse({"error": "Category not found"}, status=404)
 
-    for img in images_files:
-        img_path = os.path.join(upload_dir, img.name)
-        with open(img_path, "wb+") as f:
-            for chunk in img.chunks():
-                f.write(chunk)
-        images_urls.append(f"/media/hotels/{img.name}")
-
+    # Créer l'hôtel
     hotel = Hotel.objects.create(
         name=name,
         location=location,
         price=float(price),
         description=description,
-        images=images_urls
+        category=category
     )
+
+    # Sauvegarder les images via le modèle HotelImage
+    images_urls = []
+    for img in images_files:
+        hotel_image = HotelImage.objects.create(
+            hotel=hotel,
+            image=img
+        )
+        images_urls.append(hotel_image.image.url)
 
     return JsonResponse({
         "status": "success",
@@ -86,7 +91,8 @@ def create_hotel(request):
             "location": hotel.location,
             "price": hotel.price,
             "description": hotel.description,
-            "images": hotel.images
+            "category": hotel.category.name,
+            "images": images_urls
         }
     })
 
@@ -97,16 +103,21 @@ def create_hotel(request):
 @csrf_exempt
 def list_hotels(request):
     if request.method == "GET":
-        hotels = Hotel.objects.all()  # ✅ corrigé
+        hotels = Hotel.objects.all()
         hotel_list = []
         for h in hotels:
+            # Récupérer toutes les images liées à cet hôtel
+            images = HotelImage.objects.filter(hotel=h)
+            images_urls = [img.image.url for img in images]
+            
             hotel_list.append({
                 "id": h.id,
                 "name": h.name,
                 "location": h.location,
                 "price": h.price,
                 "description": h.description,
-                "images": h.images
+                "category": h.category.name,
+                "images": images_urls
             })
         return JsonResponse({"status": "success", "hotels": hotel_list})
     return JsonResponse({"error": "Only GET allowed"}, status=405)
@@ -119,47 +130,57 @@ def list_hotels(request):
 @login_required
 def update_hotel(request, hotel_id):
     if request.method == "PUT":
-        from django.http import QueryDict
+        try:
+            hotel = Hotel.objects.get(id=hotel_id)
+        except Hotel.DoesNotExist:
+            return JsonResponse({"error": "Hotel not found"}, status=404)
+
+        # Gérer les données textuelles
         if request.content_type == "application/x-www-form-urlencoded":
+            from django.http import QueryDict
             data = QueryDict(request.body)
         else:
             import json
             try:
                 data = json.loads(request.body)
             except json.JSONDecodeError:
-                return JsonResponse({"error": "Invalid JSON or empty body"}, status=400)
+                data = {}
 
-        try:
-            hotel = Hotel.objects.get(id=hotel_id)
-        except Hotel.DoesNotExist:
-            return JsonResponse({"error": "Hotel not found"}, status=404)
-
+        # Mettre à jour les champs
         for field in ["name", "location", "price", "description"]:
             if field in data:
                 setattr(hotel, field, data[field])
 
+        if "category" in data:
+            try:
+                category = Category.objects.get(id=data["category"])
+                hotel.category = category
+            except Category.DoesNotExist:
+                pass
+
+        # Gérer les nouvelles images si présentes
         if hasattr(request, 'FILES'):
             images_files = request.FILES.getlist("images")
-            images_urls = hotel.images if hotel.images else []
-            upload_dir = os.path.join(settings.MEDIA_ROOT, "hotels")
-            os.makedirs(upload_dir, exist_ok=True)
-
             for img in images_files:
-                img_path = os.path.join(upload_dir, img.name)
-                with open(img_path, "wb+") as f:
-                    for chunk in img.chunks():
-                        f.write(chunk)
-                images_urls.append(f"/media/hotels/{img.name}")
-            hotel.images = images_urls
+                HotelImage.objects.create(
+                    hotel=hotel,
+                    image=img
+                )
 
         hotel.save()
+
+        # Récupérer toutes les images après mise à jour
+        images = HotelImage.objects.filter(hotel=hotel)
+        images_urls = [img.image.url for img in images]
+
         return JsonResponse({"status": "success", "hotel": {
             "id": hotel.id,
             "name": hotel.name,
             "location": hotel.location,
             "price": hotel.price,
             "description": hotel.description,
-            "images": hotel.images
+            "category": hotel.category.name,
+            "images": images_urls
         }})
     return JsonResponse({"error": "Only PUT allowed"}, status=405)
 
@@ -176,6 +197,6 @@ def delete_hotel(request, hotel_id):
         except Hotel.DoesNotExist:
             return JsonResponse({"error": "Hotel not found"}, status=404)
 
-        hotel.delete()
+        hotel.delete()  # Les images seront supprimées automatiquement (cascade)
         return JsonResponse({"status": "success", "message": "Hotel deleted"})
     return JsonResponse({"error": "Only DELETE allowed"}, status=405)
