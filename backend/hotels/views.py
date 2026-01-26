@@ -1,5 +1,7 @@
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
+from rest_framework.decorators import api_view, permission_classes
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from .models import Hotel, HotelImage, Category
 import os
 from django.conf import settings
@@ -56,8 +58,8 @@ def list_categories(request):
 # ---------------------------
 # Create Hotel with images
 # ---------------------------
-@csrf_exempt
-@login_required
+@api_view(["POST"])
+@permission_classes([AllowAny])  # ou IsAuthenticated + token
 def create_hotel(request):
     if request.method != "POST":
         return JsonResponse({"error": "Only POST allowed"}, status=405)
@@ -148,9 +150,9 @@ def list_hotels(request):
 # Update Hotel
 # ---------------------------
 @csrf_exempt
-@login_required
+# @login_required
 def update_hotel(request, hotel_id):
-    if request.method == "PUT":
+    if request.method == "POST":
         try:
             hotel = Hotel.objects.get(id=hotel_id)
         except Hotel.DoesNotExist:
@@ -210,7 +212,7 @@ def update_hotel(request, hotel_id):
 # Delete Hotel
 # ---------------------------
 @csrf_exempt
-@login_required
+# @login_required
 def delete_hotel(request, hotel_id):
     if request.method == "DELETE":
         try:
