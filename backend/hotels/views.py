@@ -3,13 +3,12 @@ from django.http import JsonResponse
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from .models import Hotel, HotelImage, Category
-import os
 from django.conf import settings
 import jwt
+import os
 from functools import wraps
 from users.models import User
 
-# Clé secrète pour JWT (mettre dans .env en prod)
 SECRET_KEY = os.getenv("SECRET_KEY", "changeme123")
 
 
@@ -28,7 +27,7 @@ def login_required(view_func):
 
         try:
             payload = jwt.decode(token, SECRET_KEY, algorithms=["HS256"])
-            user_id = payload["user_id"]
+            user_id = payload.get("user_id")
         except jwt.ExpiredSignatureError:
             return JsonResponse({"error": "Token expired"}, status=401)
         except jwt.InvalidTokenError:
@@ -40,55 +39,49 @@ def login_required(view_func):
 
         request.user = user
         return view_func(request, *args, **kwargs)
-    return wrapper
 
+    return wrapper
 
 # ---------------------------
 # List Categories (public)
 # ---------------------------
-@csrf_exempt
+@api_view(["GET"])
+@permission_classes([AllowAny])
 def list_categories(request):
-    if request.method == "GET":
-        categories = Category.objects.all()
-        cat_list = [{"id": c.id, "name": c.name} for c in categories]
-        return JsonResponse({"status": "success", "categories": cat_list})
-    return JsonResponse({"error": "Only GET allowed"}, status=405)
-
+    categories = Category.objects.all()
+    data = [{"id": c.id, "name": c.name} for c in categories]
+    return JsonResponse({
+        "status": "success",
+        "categories": data
+    })
 
 # ---------------------------
 # Create Hotel with images
 # ---------------------------
 @api_view(["POST"])
-@permission_classes([AllowAny])  # ou IsAuthenticated + token
+@permission_classes([IsAuthenticated])
 def create_hotel(request):
-    if request.method != "POST":
-        return JsonResponse({"error": "Only POST allowed"}, status=405)
-
     name = request.POST.get("name")
     location = request.POST.get("location")
     price = request.POST.get("price")
     description = request.POST.get("description")
-    category_id = request.POST.get("category")
+    category_id = request.POST.get("category_id")  # 🔥 IMPORTANT
     images_files = request.FILES.getlist("images")
 
     if not all([name, location, price, description, category_id]):
         return JsonResponse({
-            "error": "Missing fields",
-            "received": {
-                "name": name,
-                "location": location,
-                "price": price,
-                "description": description,
-                "category_id": category_id
-            }
+            "status": "error",
+            "error": "Missing fields"
         }, status=400)
 
     try:
-        category = Category.objects.get(id=category_id)
-    except Category.DoesNotExist:
-        return JsonResponse({"error": "Category not found"}, status=404)
+        category = Category.objects.get(id=int(category_id))
+    except (Category.DoesNotExist, ValueError):
+        return JsonResponse({
+            "status": "error",
+            "error": "Invalid category"
+        }, status=400)
 
-    # Créer l'hôtel
     hotel = Hotel.objects.create(
         name=name,
         location=location,
@@ -97,14 +90,13 @@ def create_hotel(request):
         category=category
     )
 
-    # Sauvegarder les images via le modèle HotelImage
     images_urls = []
     for img in images_files:
-        hotel_image = HotelImage.objects.create(
+        image_obj = HotelImage.objects.create(
             hotel=hotel,
             image=img
         )
-        images_urls.append(hotel_image.image.url)
+        images_urls.append(image_obj.image.url)
 
     return JsonResponse({
         "status": "success",
@@ -114,112 +106,99 @@ def create_hotel(request):
             "location": hotel.location,
             "price": hotel.price,
             "description": hotel.description,
-            "category": hotel.category.name,
+            "category": {
+                "id": category.id,
+                "name": category.name
+            },
             "images": images_urls
         }
     })
 
-
 # ---------------------------
 # List Hotels (public)
 # ---------------------------
-@csrf_exempt
+@api_view(["GET"])
+@permission_classes([AllowAny])
 def list_hotels(request):
-    if request.method == "GET":
-        hotels = Hotel.objects.all()
-        hotel_list = []
-        for h in hotels:
-            # Récupérer toutes les images liées à cet hôtel
-            images = HotelImage.objects.filter(hotel=h)
-            images_urls = [img.image.url for img in images]
-            
-            hotel_list.append({
-                "id": h.id,
-                "name": h.name,
-                "location": h.location,
-                "price": h.price,
-                "description": h.description,
-                "category": h.category.name,
-                "images": images_urls
-            })
-        return JsonResponse({"status": "success", "hotels": hotel_list})
-    return JsonResponse({"error": "Only GET allowed"}, status=405)
+    hotels = Hotel.objects.all()
+    data = []
 
+    for h in hotels:
+        images = HotelImage.objects.filter(hotel=h)
+        data.append({
+            "id": h.id,
+            "name": h.name,
+            "location": h.location,
+            "price": h.price,
+            "description": h.description,
+            "category": {
+                "id": h.category.id,
+                "name": h.category.name
+            },
+            "images": [img.image.url for img in images]
+        })
+
+    return JsonResponse({
+        "status": "success",
+        "hotels": data
+    })
 
 # ---------------------------
 # Update Hotel
 # ---------------------------
-@csrf_exempt
-# @login_required
+@api_view(["PUT"])
+@permission_classes([IsAuthenticated])
 def update_hotel(request, hotel_id):
-    if request.method == "POST":
+    try:
+        hotel = Hotel.objects.get(id=hotel_id)
+    except Hotel.DoesNotExist:
+        return JsonResponse({"error": "Hotel not found"}, status=404)
+
+    data = request.data
+
+    for field in ["name", "location", "price", "description"]:
+        if field in data:
+            setattr(hotel, field, data[field])
+
+    if "category_id" in data:
         try:
-            hotel = Hotel.objects.get(id=hotel_id)
-        except Hotel.DoesNotExist:
-            return JsonResponse({"error": "Hotel not found"}, status=404)
+            hotel.category = Category.objects.get(id=int(data["category_id"]))
+        except Category.DoesNotExist:
+            pass
 
-        # Gérer les données textuelles
-        if request.content_type == "application/x-www-form-urlencoded":
-            from django.http import QueryDict
-            data = QueryDict(request.body)
-        else:
-            import json
-            try:
-                data = json.loads(request.body)
-            except json.JSONDecodeError:
-                data = {}
+    hotel.save()
 
-        # Mettre à jour les champs
-        for field in ["name", "location", "price", "description"]:
-            if field in data:
-                setattr(hotel, field, data[field])
+    images = HotelImage.objects.filter(hotel=hotel)
 
-        if "category" in data:
-            try:
-                category = Category.objects.get(id=data["category"])
-                hotel.category = category
-            except Category.DoesNotExist:
-                pass
-
-        # Gérer les nouvelles images si présentes
-        if hasattr(request, 'FILES'):
-            images_files = request.FILES.getlist("images")
-            for img in images_files:
-                HotelImage.objects.create(
-                    hotel=hotel,
-                    image=img
-                )
-
-        hotel.save()
-
-        # Récupérer toutes les images après mise à jour
-        images = HotelImage.objects.filter(hotel=hotel)
-        images_urls = [img.image.url for img in images]
-
-        return JsonResponse({"status": "success", "hotel": {
+    return JsonResponse({
+        "status": "success",
+        "hotel": {
             "id": hotel.id,
             "name": hotel.name,
             "location": hotel.location,
             "price": hotel.price,
             "description": hotel.description,
-            "category": hotel.category.name,
-            "images": images_urls
-        }})
-    return JsonResponse({"error": "Only PUT allowed"}, status=405)
-
+            "category": {
+                "id": hotel.category.id,
+                "name": hotel.category.name
+            },
+            "images": [img.image.url for img in images]
+        }
+    })
 
 # ---------------------------
 # Delete Hotel
 # ---------------------------
-@csrf_exempt
-# @login_required
+@api_view(["DELETE"])
+@permission_classes([IsAuthenticated])
 def delete_hotel(request, hotel_id):
-    if request.method == "DELETE":
-        try:
-            hotel = Hotel.objects.get(id=hotel_id)
-        except Hotel.DoesNotExist:
-            return JsonResponse({"error": "Hotel not found"}, status=404)
+    try:
+        hotel = Hotel.objects.get(id=hotel_id)
+    except Hotel.DoesNotExist:
+        return JsonResponse({"error": "Hotel not found"}, status=404)
 
-        hotel.delete()  # Les images seront supprimées automatiquement (cascade)
-        return JsonResponse({"status": "success", "message": "Hotel deleted"})
-    return JsonResponse({"error": "Only DELETE allowed"}, status=405)
+    hotel.delete()
+    return JsonResponse({
+        "status": "success",
+        "message": "Hotel deleted"
+    })
