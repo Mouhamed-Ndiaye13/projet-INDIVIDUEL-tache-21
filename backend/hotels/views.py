@@ -1,9 +1,8 @@
-# hotels/views.py
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
-from .models import Hotel, HotelImage, Category
+from .models import Hotel, HotelImage
 from users.models import User
 import jwt
 import os
@@ -12,7 +11,7 @@ from functools import wraps
 SECRET_KEY = os.getenv("SECRET_KEY", "changeme123")
 
 # ---------------------------
-# Décorateur JWT pour sécuriser certaines routes
+# Décorateur JWT (optionnel)
 # ---------------------------
 def login_required(view_func):
     @wraps(view_func)
@@ -41,16 +40,6 @@ def login_required(view_func):
     return wrapper
 
 # ---------------------------
-# List Categories (public)
-# ---------------------------
-@api_view(["GET"])
-@permission_classes([AllowAny])
-def list_categories(request):
-    categories = Category.objects.all()
-    data = [{"id": c.id, "name": c.name} for c in categories]
-    return JsonResponse({"status": "success", "categories": data})
-
-# ---------------------------
 # List Hotels (public)
 # ---------------------------
 @api_view(["GET"])
@@ -58,53 +47,52 @@ def list_categories(request):
 def list_hotels(request):
     hotels = Hotel.objects.all()
     data = []
+
     for h in hotels:
-        images = [img.image.url for img in HotelImage.objects.filter(hotel=h)]
+        images = [img.image.url for img in h.images.all() if img.image]
         data.append({
             "id": h.id,
             "name": h.name,
             "location": h.location,
             "price": h.price,
             "description": h.description,
-            "category": {"id": h.category.id, "name": h.category.name},
-            "images": images
+            "images": images,
+            "created_at": h.created_at,
         })
+
     return JsonResponse({"status": "success", "hotels": data})
 
 # ---------------------------
-# Create Hotel (exempt CSRF)
+# Create Hotel
 # ---------------------------
-@csrf_exempt  # ⚠️ doit être AVANT @api_view
+@csrf_exempt
 @api_view(["POST"])
-@permission_classes([AllowAny])  # Peut passer à IsAuthenticated si JWT est géré correctement
+@permission_classes([AllowAny])  # Passe à IsAuthenticated si besoin
 def create_hotel(request):
     name = request.POST.get("name")
     location = request.POST.get("location")
     price = request.POST.get("price")
     description = request.POST.get("description")
-    category_id = request.POST.get("category")  # React envoie "category"
     images_files = request.FILES.getlist("images")
 
-    if not all([name, location, price, description, category_id]):
-        return JsonResponse({"status": "error", "error": "Veuillez remplir tous les champs"}, status=400)
-
-    try:
-        category = Category.objects.get(id=int(category_id))
-    except (Category.DoesNotExist, ValueError):
-        return JsonResponse({"status": "error", "error": "Catégorie invalide"}, status=400)
+    if not all([name, location, price, description]):
+        return JsonResponse(
+            {"status": "error", "error": "Veuillez remplir tous les champs"},
+            status=400
+        )
 
     hotel = Hotel.objects.create(
         name=name,
         location=location,
         price=float(price),
-        description=description,
-        category=category
+        description=description
     )
 
     images_urls = []
     for img in images_files:
         obj = HotelImage.objects.create(hotel=hotel, image=img)
-        images_urls.append(obj.image.url)
+        if obj.image:
+            images_urls.append(obj.image.url)
 
     return JsonResponse({
         "status": "success",
@@ -114,10 +102,10 @@ def create_hotel(request):
             "location": hotel.location,
             "price": hotel.price,
             "description": hotel.description,
-            "category": {"id": category.id, "name": category.name},
-            "images": images_urls
+            "images": images_urls,
+            "created_at": hotel.created_at,
         }
-    })
+    }, status=201)
 
 # ---------------------------
 # Update Hotel
@@ -132,27 +120,27 @@ def update_hotel(request, hotel_id):
         return JsonResponse({"error": "Hotel not found"}, status=404)
 
     data = request.data
+
     for field in ["name", "location", "price", "description"]:
         if field in data:
             setattr(hotel, field, data[field])
 
-    if "category" in data:
-        try:
-            hotel.category = Category.objects.get(id=int(data["category"]))
-        except Category.DoesNotExist:
-            pass
-
     hotel.save()
-    images = [img.image.url for img in HotelImage.objects.filter(hotel=hotel)]
-    return JsonResponse({"status": "success", "hotel": {
-        "id": hotel.id,
-        "name": hotel.name,
-        "location": hotel.location,
-        "price": hotel.price,
-        "description": hotel.description,
-        "category": {"id": hotel.category.id, "name": hotel.category.name},
-        "images": images
-    }})
+
+    images = [img.image.url for img in hotel.images.all() if img.image]
+
+    return JsonResponse({
+        "status": "success",
+        "hotel": {
+            "id": hotel.id,
+            "name": hotel.name,
+            "location": hotel.location,
+            "price": hotel.price,
+            "description": hotel.description,
+            "images": images,
+            "updated_at": hotel.updated_at,
+        }
+    })
 
 # ---------------------------
 # Delete Hotel
@@ -167,4 +155,7 @@ def delete_hotel(request, hotel_id):
         return JsonResponse({"error": "Hotel not found"}, status=404)
 
     hotel.delete()
-    return JsonResponse({"status": "success", "message": "Hotel deleted"})
+    return JsonResponse({
+        "status": "success",
+        "message": "Hotel deleted"
+    })

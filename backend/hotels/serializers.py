@@ -1,32 +1,32 @@
 from rest_framework import serializers
-from .models import Hotel, Category, HotelImage
-
-class CategorySerializer(serializers.ModelSerializer):
-    class Meta:
-        model = Category
-        fields = ["id", "name"]
+from .models import Hotel, HotelImage
 
 
 class HotelImageSerializer(serializers.ModelSerializer):
-    image = serializers.SerializerMethodField()
+    image_url = serializers.SerializerMethodField()
 
     class Meta:
         model = HotelImage
-        fields = ["image"]
+        fields = ["id", "image", "image_url", "uploaded_at"]
+        extra_kwargs = {
+            'image': {'write_only': True}
+        }
 
-    def get_image(self, obj):
+    def get_image_url(self, obj):
         if obj.image:
-            return obj.image.url
+            try:
+                return obj.image.url
+            except Exception:
+                return None
         return None
 
 
 class HotelSerializer(serializers.ModelSerializer):
     images = HotelImageSerializer(many=True, read_only=True)
-    category = CategorySerializer(read_only=True)
-    category_id = serializers.PrimaryKeyRelatedField(
-        queryset=Category.objects.all(),
-        source="category",
-        write_only=True
+    uploaded_images = serializers.ListField(
+        child=serializers.ImageField(),
+        write_only=True,
+        required=False
     )
 
     class Meta:
@@ -37,7 +37,29 @@ class HotelSerializer(serializers.ModelSerializer):
             "location",
             "description",
             "price",
-            "category",
-            "category_id",
-            "images"
+            "images",
+            "uploaded_images",
+            "created_at",
+            "updated_at"
         ]
+
+    def create(self, validated_data):
+        uploaded_images = validated_data.pop('uploaded_images', [])
+        hotel = Hotel.objects.create(**validated_data)
+
+        for image in uploaded_images:
+            HotelImage.objects.create(hotel=hotel, image=image)
+
+        return hotel
+
+    def update(self, instance, validated_data):
+        uploaded_images = validated_data.pop('uploaded_images', [])
+
+        for attr, value in validated_data.items():
+            setattr(instance, attr, value)
+        instance.save()
+
+        for image in uploaded_images:
+            HotelImage.objects.create(hotel=instance, image=image)
+
+        return instance
