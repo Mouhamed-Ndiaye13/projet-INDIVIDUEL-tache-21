@@ -8,9 +8,16 @@ class CategorySerializer(serializers.ModelSerializer):
 
 
 class HotelImageSerializer(serializers.ModelSerializer):
+    image = serializers.SerializerMethodField()
+
     class Meta:
         model = HotelImage
         fields = ["image"]
+
+    def get_image(self, obj):
+        if obj.image:
+            return obj.image.url
+        return None
 
 
 class HotelSerializer(serializers.ModelSerializer):
