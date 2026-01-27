@@ -7,6 +7,7 @@ export default function Hotels() {
   const [open, setOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [hotels, setHotels] = useState([]);
+  const [categories, setCategories] = useState([]);
 
   const [newHotel, setNewHotel] = useState({
     name: "",
@@ -14,10 +15,25 @@ export default function Hotels() {
     description: "",
     images: [],
     price: "0",
+    category: "", // ID numérique
   });
 
   const API_URL = "https://projet-individuel-tache-21.onrender.com/api";
-  const MEDIA_URL = "https://projet-individuel-tache-21.onrender.com"; // 🔹 backend prod
+  const MEDIA_URL = "https://projet-individuel-tache-21.onrender.com";
+
+  // ----------------------------
+  // Charger les catégories
+  // ----------------------------
+  useEffect(() => {
+    fetch(`${API_URL}/hotels/categories/`)
+      .then((res) => res.json())
+      .then((data) => {
+        if (data.status === "success" && data.categories.length > 0) {
+          setCategories(data.categories);
+        }
+      })
+      .catch((err) => console.error("Erreur catégories:", err));
+  }, []);
 
   // ----------------------------
   // Charger les hôtels
@@ -34,7 +50,7 @@ export default function Hotels() {
           setHotels(formatted);
         }
       })
-      .catch((err) => console.error(err));
+      .catch((err) => console.error("Erreur hôtels:", err));
   }, []);
 
   // ----------------------------
@@ -47,6 +63,7 @@ export default function Hotels() {
       !newHotel.name ||
       !newHotel.location ||
       !newHotel.description ||
+      !newHotel.category ||
       newHotel.images.length === 0
     ) {
       alert("Veuillez remplir tous les champs");
@@ -57,11 +74,12 @@ export default function Hotels() {
     formData.append("name", newHotel.name);
     formData.append("location", newHotel.location);
     formData.append("description", newHotel.description);
-    formData.append("price", String(newHotel.price)); // 🔹 obligatoire chaîne
+    formData.append("price", String(newHotel.price));
+    formData.append("category", Number(newHotel.category)); // ID numérique
     newHotel.images.forEach((img) => formData.append("images", img));
 
     try {
-      const token = localStorage.getItem("token"); // 🔑 récupère le token
+      const token = localStorage.getItem("token");
       if (!token) {
         alert("Vous devez être connecté pour ajouter un hôtel");
         return;
@@ -71,7 +89,7 @@ export default function Hotels() {
         method: "POST",
         body: formData,
         headers: {
-          Authorization: `Bearer ${token}`, // 🔹 JWT
+          Authorization: `Bearer ${token}`,
         },
       });
 
@@ -92,7 +110,15 @@ export default function Hotels() {
         };
         setHotels([...hotels, hotelFormatted]);
         setModalOpen(false);
-        setNewHotel({ name: "", location: "", description: "", images: [], price: "0" });
+        setNewHotel({
+          name: "",
+          location: "",
+          description: "",
+          images: [],
+          price: "0",
+          category: "",
+        });
+        alert("Hôtel ajouté avec succès !");
       } else {
         alert(data.error || "Erreur lors de l'ajout");
       }
@@ -116,7 +142,7 @@ export default function Hotels() {
               <h1 className="text-3xl md:text-4xl font-extrabold text-white">
                 Nos <span className="text-cyan-400">Hôtels</span>
               </h1>
-              <p className="text-white/60 mt-2">Gestion des hôtels avec images locales</p>
+              <p className="text-white/60 mt-2">Gestion des hôtels avec images</p>
             </div>
 
             <button
@@ -180,8 +206,31 @@ export default function Hotels() {
                 onChange={(e) => setNewHotel({ ...newHotel, location: e.target.value })}
               />
 
+              {/* Sélecteur de catégorie */}
+              <select
+                className="w-full px-4 py-3 rounded-xl bg-white/10 text-white border border-white/20 focus:outline-none focus:ring-2 focus:ring-cyan-400/60 transition"
+                value={newHotel.category}
+                onChange={(e) => setNewHotel({ ...newHotel, category: e.target.value })}
+              >
+                <option value="" className="bg-gray-800">Choisir une catégorie</option>
+                {categories.map((cat) => (
+                  <option key={cat.id} value={cat.id} className="bg-gray-800">
+                    {cat.name}
+                  </option>
+                ))}
+              </select>
+
+              <input
+                type="number"
+                placeholder="Prix"
+                className="w-full px-4 py-3 rounded-xl bg-white/10 text-white border border-white/20 placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-cyan-400/60 transition"
+                value={newHotel.price}
+                onChange={(e) => setNewHotel({ ...newHotel, price: e.target.value })}
+              />
+
               <textarea
                 placeholder="Description"
+                rows="3"
                 className="w-full px-4 py-3 rounded-xl bg-white/10 text-white border border-white/20 placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-cyan-400/60 transition resize-none"
                 value={newHotel.description}
                 onChange={(e) => setNewHotel({ ...newHotel, description: e.target.value })}
@@ -189,7 +238,7 @@ export default function Hotels() {
 
               <input
                 type="file"
-                name="images" // 🔹 obligatoire pour Django
+                name="images"
                 multiple
                 accept="image/*"
                 className="w-full text-white"
