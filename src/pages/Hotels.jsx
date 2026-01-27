@@ -7,7 +7,12 @@ export default function Hotels() {
   const [open, setOpen] = useState(false);
   const [modalOpen, setModalOpen] = useState(false);
   const [hotels, setHotels] = useState([]);
-  const [categories, setCategories] = useState([]);
+  const [categories, setCategories] = useState([
+    { id: "standard", name: "Standard" },
+    { id: "deluxe", name: "Deluxe" },
+    { id: "suite", name: "Suite" },
+    { id: "presidential", name: "Présidentielle" },
+  ]);
 
   const [newHotel, setNewHotel] = useState({
     name: "",
@@ -15,14 +20,14 @@ export default function Hotels() {
     description: "",
     images: [],
     price: "0",
-    category: "", // ID numérique
+    category: "",
   });
 
   const API_URL = "https://projet-individuel-tache-21.onrender.com/api";
   const MEDIA_URL = "https://projet-individuel-tache-21.onrender.com";
 
   // ----------------------------
-  // Charger les catégories
+  // Charger les catégories depuis l'API
   // ----------------------------
   useEffect(() => {
     fetch(`${API_URL}/hotels/categories/`)
@@ -75,7 +80,7 @@ export default function Hotels() {
     formData.append("location", newHotel.location);
     formData.append("description", newHotel.description);
     formData.append("price", String(newHotel.price));
-    formData.append("category", Number(newHotel.category)); // ID numérique
+    formData.append("category", newHotel.category);
     newHotel.images.forEach((img) => formData.append("images", img));
 
     try {
