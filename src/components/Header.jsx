@@ -5,6 +5,7 @@ export default function Header({ title, open, setOpen }) {
   const [userName, setUserName] = useState("Utilisateur");
 
   // Récupérer le nom depuis localStorage
+  
   useEffect(() => {
     const user = localStorage.getItem("user");
     if (user) {
