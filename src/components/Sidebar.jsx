@@ -1,7 +1,9 @@
-import { NavLink } from "react-router-dom";
+import { NavLink, useNavigate } from "react-router-dom";
 import { FaHome, FaHotel, FaSignOutAlt } from "react-icons/fa";
 
 export default function Sidebar({ open, setOpen }) {
+  const navigate = useNavigate();
+
   const linkClass = ({ isActive }) =>
     `
     group flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300
@@ -17,6 +19,24 @@ export default function Sidebar({ open, setOpen }) {
     group-hover:scale-110 group-hover:rotate-3
     transition-all duration-300
   `;
+
+  // ---------------------------
+  // LOGOUT FUNCTION
+  // ---------------------------
+  const handleLogout = () => {
+    // 1️⃣ Supprimer token et user
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+
+    // 2️⃣ Redirection forcée vers login et remplacement de l'historique
+    navigate("/", { replace: true });
+
+    // 3️⃣ Bloquer le retour arrière (bonus)
+    window.history.pushState(null, "", window.location.href);
+    window.onpopstate = () => {
+      window.history.pushState(null, "", window.location.href);
+    };
+  };
 
   return (
     <>
@@ -63,6 +83,7 @@ export default function Sidebar({ open, setOpen }) {
 
         {/* Logout */}
         <button
+          onClick={handleLogout}
           className="
           mt-auto flex items-center gap-3 px-4 py-3 rounded-xl
           bg-red-500/10 text-red-400
