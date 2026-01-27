@@ -17,7 +17,6 @@ export default function Hotels() {
   });
 
   const API_URL = "https://projet-individuel-tache-21.onrender.com/api";
-  const MEDIA_URL = "https://projet-individuel-tache-21.onrender.com"; // 🔹 backend prod
 
   // ----------------------------
   // Charger les hôtels
@@ -27,11 +26,7 @@ export default function Hotels() {
       .then((res) => res.json())
       .then((data) => {
         if (data.status === "success") {
-          const formatted = data.hotels.map((h) => ({
-            ...h,
-            images: h.images.map((img) => `${MEDIA_URL}${img}`),
-          }));
-          setHotels(formatted);
+          setHotels(data.hotels); // images = URLs directes
         }
       })
       .catch((err) => console.error(err));
@@ -47,9 +42,10 @@ export default function Hotels() {
       !newHotel.name ||
       !newHotel.location ||
       !newHotel.description ||
+      !newHotel.price ||
       newHotel.images.length === 0
     ) {
-      alert("Veuillez remplir tous les champs");
+      alert("Tous les champs + au moins une image sont obligatoires");
       return;
     }
 
@@ -57,11 +53,11 @@ export default function Hotels() {
     formData.append("name", newHotel.name);
     formData.append("location", newHotel.location);
     formData.append("description", newHotel.description);
-    formData.append("price", String(newHotel.price)); // 🔹 obligatoire chaîne
+    formData.append("price", String(newHotel.price));
     newHotel.images.forEach((img) => formData.append("images", img));
 
     try {
-      const token = localStorage.getItem("token"); // 🔑 récupère le token
+      const token = localStorage.getItem("token");
       if (!token) {
         alert("Vous devez être connecté pour ajouter un hôtel");
         return;
@@ -71,28 +67,22 @@ export default function Hotels() {
         method: "POST",
         body: formData,
         headers: {
-          Authorization: `Bearer ${token}`, // 🔹 JWT
+          Authorization: `Bearer ${token}`,
         },
       });
 
-      const text = await res.text();
-      let data;
-      try {
-        data = JSON.parse(text);
-      } catch {
-        console.error("Réponse non JSON :", text);
-        alert("Erreur serveur : réponse inattendue");
-        return;
-      }
+      const data = await res.json();
 
       if (data.status === "success") {
-        const hotelFormatted = {
-          ...data.hotel,
-          images: data.hotel.images.map((img) => `${MEDIA_URL}${img}`),
-        };
-        setHotels([...hotels, hotelFormatted]);
+        setHotels((prev) => [...prev, data.hotel]);
         setModalOpen(false);
-        setNewHotel({ name: "", location: "", description: "", images: [], price: "0" });
+        setNewHotel({
+          name: "",
+          location: "",
+          description: "",
+          images: [],
+          price: "0",
+        });
       } else {
         alert(data.error || "Erreur lors de l'ajout");
       }
@@ -110,13 +100,15 @@ export default function Hotels() {
         <Header title="Hôtels" open={open} setOpen={setOpen} />
 
         <main className="p-6 md:p-10">
-          {/* Title + Bouton */}
+          {/* Header + Bouton */}
           <div className="flex flex-col md:flex-row md:items-center md:justify-between mb-10 gap-4">
             <div>
               <h1 className="text-3xl md:text-4xl font-extrabold text-white">
                 Nos <span className="text-cyan-400">Hôtels</span>
               </h1>
-              <p className="text-white/60 mt-2">Gestion des hôtels avec images locales</p>
+              <p className="text-white/60 mt-2">
+                Gestion des hôtels avec Cloudinary
+              </p>
             </div>
 
             <button
@@ -154,7 +146,9 @@ export default function Hotels() {
                           rounded-2xl p-6 md:p-8 z-50 overflow-y-auto max-h-[90vh] shadow-[0_0_40px_rgba(0,0,0,0.6)]">
 
             <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold text-white">Ajouter un hôtel</h2>
+              <h2 className="text-2xl font-bold text-white">
+                Ajouter un hôtel
+              </h2>
               <button
                 className="text-white text-2xl font-bold hover:text-red-400 transition"
                 onClick={() => setModalOpen(false)}
@@ -167,38 +161,55 @@ export default function Hotels() {
               <input
                 type="text"
                 placeholder="Nom"
-                className="w-full px-4 py-3 rounded-xl bg-white/10 text-white border border-white/20 placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-cyan-400/60 transition"
+                className="input"
                 value={newHotel.name}
-                onChange={(e) => setNewHotel({ ...newHotel, name: e.target.value })}
+                onChange={(e) =>
+                  setNewHotel({ ...newHotel, name: e.target.value })
+                }
               />
 
               <input
                 type="text"
                 placeholder="Localisation"
-                className="w-full px-4 py-3 rounded-xl bg-white/10 text-white border border-white/20 placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-cyan-400/60 transition"
+                className="input"
                 value={newHotel.location}
-                onChange={(e) => setNewHotel({ ...newHotel, location: e.target.value })}
+                onChange={(e) =>
+                  setNewHotel({ ...newHotel, location: e.target.value })
+                }
               />
 
               <textarea
                 placeholder="Description"
-                className="w-full px-4 py-3 rounded-xl bg-white/10 text-white border border-white/20 placeholder-white/50 focus:outline-none focus:ring-2 focus:ring-cyan-400/60 transition resize-none"
+                className="input resize-none"
                 value={newHotel.description}
-                onChange={(e) => setNewHotel({ ...newHotel, description: e.target.value })}
+                onChange={(e) =>
+                  setNewHotel({ ...newHotel, description: e.target.value })
+                }
+              />
+
+              <input
+                type="number"
+                placeholder="Prix"
+                className="input"
+                value={newHotel.price}
+                onChange={(e) =>
+                  setNewHotel({ ...newHotel, price: e.target.value })
+                }
               />
 
               <input
                 type="file"
-                name="images" // 🔹 obligatoire pour Django
                 multiple
                 accept="image/*"
                 className="w-full text-white"
                 onChange={(e) =>
-                  setNewHotel({ ...newHotel, images: Array.from(e.target.files) })
+                  setNewHotel({
+                    ...newHotel,
+                    images: Array.from(e.target.files),
+                  })
                 }
               />
 
-              {/* Preview des images */}
               {newHotel.images.length > 0 && (
                 <div className="flex gap-2 flex-wrap mt-2">
                   {newHotel.images.map((img, idx) => (
@@ -215,7 +226,8 @@ export default function Hotels() {
               <button
                 type="submit"
                 className="w-full py-3 rounded-xl bg-gradient-to-r from-cyan-400 to-violet-500 text-white font-semibold
-                           hover:shadow-[0_0_30px_rgba(56,189,248,0.8)] hover:scale-[1.02] transition-all duration-300"
+                           hover:shadow-[0_0_30px_rgba(56,189,248,0.8)]
+                           transition-all duration-300"
               >
                 Ajouter
               </button>

@@ -10,10 +10,10 @@ export default function HotelCard({ hotel }) {
       transition-all duration-500
       "
     >
-      {/* Image */}
+      {/* Image principale */}
       <div className="relative h-56 overflow-hidden">
         <img
-          src={hotel.image}
+          src={hotel.images[0] || "/placeholder.png"} // ⚡ utilise la première image
           alt={hotel.name}
           className="
           w-full h-full object-cover
@@ -23,28 +23,16 @@ export default function HotelCard({ hotel }) {
         />
 
         {/* Overlay gradient */}
-        <div
-          className="
-          absolute inset-0
-          bg-gradient-to-t from-black/70 via-black/30 to-transparent
-          "
-        />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/30 to-transparent" />
       </div>
 
       {/* Content */}
       <div className="relative p-5 space-y-2">
-        <h3
-          className="
-          text-lg font-extrabold tracking-wide text-white
-          group-hover:text-cyan-400 transition-colors
-          "
-        >
+        <h3 className="text-lg font-extrabold tracking-wide text-white group-hover:text-cyan-400 transition-colors">
           {hotel.name}
         </h3>
 
-        <p className="text-sm text-cyan-300/80 tracking-wide">
-          {hotel.location}
-        </p>
+        <p className="text-sm text-cyan-300/80 tracking-wide">{hotel.location}</p>
 
         <p className="text-sm text-white/70 leading-relaxed line-clamp-3">
           {hotel.description}
