@@ -1,11 +1,11 @@
+# hotels/views.py
 from django.views.decorators.csrf import csrf_exempt
 from django.http import JsonResponse
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from .models import Hotel, HotelImage, Category
 from django.conf import settings
-import jwt
-import os
+import jwt, os
 from functools import wraps
 from users.models import User
 
@@ -13,7 +13,7 @@ SECRET_KEY = os.getenv("SECRET_KEY", "changeme123")
 
 
 # ---------------------------
-# Décorateur pour sécuriser les routes
+# Décorateur pour sécuriser les routes via JWT
 # ---------------------------
 def login_required(view_func):
     @wraps(view_func)
@@ -39,25 +39,25 @@ def login_required(view_func):
 
         request.user = user
         return view_func(request, *args, **kwargs)
-
     return wrapper
+
 
 # ---------------------------
 # List Categories (public)
 # ---------------------------
+@csrf_exempt
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def list_categories(request):
     categories = Category.objects.all()
     data = [{"id": c.id, "name": c.name} for c in categories]
-    return JsonResponse({
-        "status": "success",
-        "categories": data
-    })
+    return JsonResponse({"status": "success", "categories": data})
+
 
 # ---------------------------
 # Create Hotel with images
 # ---------------------------
+@csrf_exempt
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def create_hotel(request):
@@ -65,22 +65,16 @@ def create_hotel(request):
     location = request.POST.get("location")
     price = request.POST.get("price")
     description = request.POST.get("description")
-    category_id = request.POST.get("category_id")  # 🔥 IMPORTANT
+    category_id = request.POST.get("category")  # ID numérique attendu
     images_files = request.FILES.getlist("images")
 
     if not all([name, location, price, description, category_id]):
-        return JsonResponse({
-            "status": "error",
-            "error": "Missing fields"
-        }, status=400)
+        return JsonResponse({"status": "error", "error": "Missing fields"}, status=400)
 
     try:
         category = Category.objects.get(id=int(category_id))
     except (Category.DoesNotExist, ValueError):
-        return JsonResponse({
-            "status": "error",
-            "error": "Invalid category"
-        }, status=400)
+        return JsonResponse({"status": "error", "error": "Invalid category"}, status=400)
 
     hotel = Hotel.objects.create(
         name=name,
@@ -92,10 +86,7 @@ def create_hotel(request):
 
     images_urls = []
     for img in images_files:
-        image_obj = HotelImage.objects.create(
-            hotel=hotel,
-            image=img
-        )
+        image_obj = HotelImage.objects.create(hotel=hotel, image=img)
         images_urls.append(image_obj.image.url)
 
     return JsonResponse({
@@ -106,23 +97,21 @@ def create_hotel(request):
             "location": hotel.location,
             "price": hotel.price,
             "description": hotel.description,
-            "category": {
-                "id": category.id,
-                "name": category.name
-            },
+            "category": {"id": category.id, "name": category.name},
             "images": images_urls
         }
     })
 
+
 # ---------------------------
 # List Hotels (public)
 # ---------------------------
+@csrf_exempt
 @api_view(["GET"])
 @permission_classes([AllowAny])
 def list_hotels(request):
     hotels = Hotel.objects.all()
     data = []
-
     for h in hotels:
         images = HotelImage.objects.filter(hotel=h)
         data.append({
@@ -131,21 +120,16 @@ def list_hotels(request):
             "location": h.location,
             "price": h.price,
             "description": h.description,
-            "category": {
-                "id": h.category.id,
-                "name": h.category.name
-            },
+            "category": {"id": h.category.id, "name": h.category.name},
             "images": [img.image.url for img in images]
         })
+    return JsonResponse({"status": "success", "hotels": data})
 
-    return JsonResponse({
-        "status": "success",
-        "hotels": data
-    })
 
 # ---------------------------
 # Update Hotel
 # ---------------------------
+@csrf_exempt
 @api_view(["PUT"])
 @permission_classes([IsAuthenticated])
 def update_hotel(request, hotel_id):
@@ -155,19 +139,17 @@ def update_hotel(request, hotel_id):
         return JsonResponse({"error": "Hotel not found"}, status=404)
 
     data = request.data
-
     for field in ["name", "location", "price", "description"]:
         if field in data:
             setattr(hotel, field, data[field])
 
-    if "category_id" in data:
+    if "category" in data:
         try:
-            hotel.category = Category.objects.get(id=int(data["category_id"]))
+            hotel.category = Category.objects.get(id=int(data["category"]))
         except Category.DoesNotExist:
             pass
 
     hotel.save()
-
     images = HotelImage.objects.filter(hotel=hotel)
 
     return JsonResponse({
@@ -178,17 +160,16 @@ def update_hotel(request, hotel_id):
             "location": hotel.location,
             "price": hotel.price,
             "description": hotel.description,
-            "category": {
-                "id": hotel.category.id,
-                "name": hotel.category.name
-            },
+            "category": {"id": hotel.category.id, "name": hotel.category.name},
             "images": [img.image.url for img in images]
         }
     })
 
+
 # ---------------------------
 # Delete Hotel
 # ---------------------------
+@csrf_exempt
 @api_view(["DELETE"])
 @permission_classes([IsAuthenticated])
 def delete_hotel(request, hotel_id):
@@ -198,7 +179,4 @@ def delete_hotel(request, hotel_id):
         return JsonResponse({"error": "Hotel not found"}, status=404)
 
     hotel.delete()
-    return JsonResponse({
-        "status": "success",
-        "message": "Hotel deleted"
-    })
+    return JsonResponse({"status": "success", "message": "Hotel deleted"})
