@@ -2,8 +2,6 @@ import dj_database_url
 from pathlib import Path
 import os
 from dotenv import load_dotenv
-import cloudinary
-
 
 # -------------------------
 # Chargement des variables d'environnement
@@ -33,12 +31,12 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
 
+    # Third party
     "corsheaders",
-
-    # 🔥 Cloudinary
+    "cloudinary_storage",  # 🔥 DOIT ÊTRE AVANT staticfiles
     "cloudinary",
-    "cloudinary_storage",
 
+    # Your apps
     "users",
     "hotels",
     "bookings",
@@ -56,6 +54,7 @@ MIDDLEWARE = [
     "django.contrib.sessions.middleware.SessionMiddleware",
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
+    "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
 
@@ -112,17 +111,8 @@ DATABASES = {
 
 
 # -------------------------
-# Static files
+# Cloudinary Configuration
 # -------------------------
-STATIC_URL = "/static/"
-STATIC_ROOT = BASE_DIR / "staticfiles"
-
-
-# -------------------------
-# Media & Cloudinary
-# -------------------------
-MEDIA_URL = "/media/"
-
 CLOUDINARY_STORAGE = {
     "CLOUD_NAME": os.getenv("CLOUDINARY_CLOUD_NAME"),
     "API_KEY": os.getenv("CLOUDINARY_API_KEY"),
@@ -130,7 +120,18 @@ CLOUDINARY_STORAGE = {
 }
 
 
+# -------------------------
+# Media & Storage
+# -------------------------
+MEDIA_URL = "/media/"
 DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
+
+
+# -------------------------
+# Static files
+# -------------------------
+STATIC_URL = "/static/"
+STATIC_ROOT = BASE_DIR / "staticfiles"
 
 
 # -------------------------
