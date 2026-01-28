@@ -26,7 +26,7 @@ export default function Hotels() {
       .then((res) => res.json())
       .then((data) => {
         if (data.status === "success") {
-          setHotels(data.hotels); // images = URLs directes
+          setHotels(data.hotels);
         }
       })
       .catch((err) => console.error(err));
@@ -161,7 +161,7 @@ export default function Hotels() {
               <input
                 type="text"
                 placeholder="Nom"
-                className="input"
+                className="w-full px-4 py-3 rounded-xl bg-white/10 text-white border border-white/20 placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-cyan-400/60 transition"
                 value={newHotel.name}
                 onChange={(e) =>
                   setNewHotel({ ...newHotel, name: e.target.value })
@@ -171,7 +171,7 @@ export default function Hotels() {
               <input
                 type="text"
                 placeholder="Localisation"
-                className="input"
+                className="w-full px-4 py-3 rounded-xl bg-white/10 text-white border border-white/20 placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-cyan-400/60 transition"
                 value={newHotel.location}
                 onChange={(e) =>
                   setNewHotel({ ...newHotel, location: e.target.value })
@@ -180,7 +180,7 @@ export default function Hotels() {
 
               <textarea
                 placeholder="Description"
-                className="input resize-none"
+                className="w-full px-4 py-3 rounded-xl bg-white/10 text-white border border-white/20 placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-cyan-400/60 transition resize-none"
                 value={newHotel.description}
                 onChange={(e) =>
                   setNewHotel({ ...newHotel, description: e.target.value })
@@ -190,7 +190,7 @@ export default function Hotels() {
               <input
                 type="number"
                 placeholder="Prix"
-                className="input"
+                className="w-full px-4 py-3 rounded-xl bg-white/10 text-white border border-white/20 placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-cyan-400/60 transition"
                 value={newHotel.price}
                 onChange={(e) =>
                   setNewHotel({ ...newHotel, price: e.target.value })

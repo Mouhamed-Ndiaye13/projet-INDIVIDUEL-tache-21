@@ -29,21 +29,22 @@ export default function Register() {
     try {
       setLoading(true);
 
+      // Appel API pour enregistrer l'utilisateur
       const res = await api.post("/users/register/", {
         name,
         email,
         password,
       });
 
-      // 🔐 Sauvegarde token + user
-      localStorage.setItem("token", res.data.token);
-      localStorage.setItem("user", JSON.stringify(res.data.user));
+      // Optionnel : si tu veux sauvegarder le token maintenant pour rester connecté
+      // localStorage.setItem("token", res.data.token);
+      // localStorage.setItem("user", JSON.stringify(res.data.user));
 
-      navigate("/dashboard");
+      // 🔑 Redirection vers Login avec replace: true pour bloquer le back
+      navigate("/", { replace: true });
     } catch (err) {
       setError(
-        err.response?.data?.error ||
-          "Erreur lors de l’inscription"
+        err.response?.data?.error || "Erreur lors de l’inscription"
       );
     } finally {
       setLoading(false);
