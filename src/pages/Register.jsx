@@ -30,15 +30,11 @@ export default function Register() {
       setLoading(true);
 
       // Appel API pour enregistrer l'utilisateur
-      const res = await api.post("/users/register/", {
+      await api.post("/users/register/", {
         name,
         email,
         password,
       });
-
-      // Optionnel : si tu veux sauvegarder le token maintenant pour rester connecté
-      // localStorage.setItem("token", res.data.token);
-      // localStorage.setItem("user", JSON.stringify(res.data.user));
 
       // 🔑 Redirection vers Login avec replace: true pour bloquer le back
       navigate("/", { replace: true });
