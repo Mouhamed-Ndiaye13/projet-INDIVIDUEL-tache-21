@@ -3,19 +3,25 @@ from .views import SignupPendingView, ActivatePendingUserView, LoginJWTView
 
 urlpatterns = [
     # -------------------------
-    # Custom signup & activation (PendingUser)
+    # Custom endpoints
     # -------------------------
+
+    # Pré-inscription : crée un PendingUser et envoie email
     path("signup/", SignupPendingView.as_view(), name="signup-pending"),
+
+    # Activation via token (lien envoyé par email)
     path("activate/<uuid:token>/", ActivatePendingUserView.as_view(), name="activate-pending"),
 
-    # -------------------------
-    # Custom login JWT (connexion sans activation obligatoire)
-    # -------------------------
+    # Login JWT personnalisé
     path("login/", LoginJWTView.as_view(), name="login-jwt"),
 
     # -------------------------
-    # Djoser endpoints (reset password, activation, JWT)
+    # Djoser endpoints (optionnels, pour reset password/email confirmation)
     # -------------------------
-    path("auth/", include("djoser.urls")),       # reset password, account activation, user management
-    path("auth/", include("djoser.urls.jwt")),   # JWT endpoints (login, refresh, verify)
+
+    # Signup / reset / activation
+    path("auth/", include("djoser.urls")),          
+
+    # JWT login / refresh / verify
+    path("auth/", include("djoser.urls.jwt")),      
 ]

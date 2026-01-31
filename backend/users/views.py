@@ -5,11 +5,6 @@ from django.urls import reverse
 from django.contrib.auth import get_user_model
 from .models import PendingUser
 from rest_framework_simplejwt.tokens import RefreshToken
-from djoser.conf import settings as djoser_settings
-from djoser.utils import encode_uid, decode_uid
-from django.contrib.sites.shortcuts import get_current_site
-from django.template.loader import render_to_string
-
 
 # -------------------------
 # Pré-inscription : crée un PendingUser et envoie mail
@@ -18,9 +13,6 @@ class SignupPendingView(generics.CreateAPIView):
     def post(self, request, *args, **kwargs):
         email = request.data.get("email")
         password = request.data.get("password")
-
-        if not email or not password:
-            return Response({"error": "Email et mot de passe requis."}, status=400)
 
         if PendingUser.objects.filter(email=email).exists():
             return Response({"error": "Un email est déjà en attente de confirmation."}, status=400)
@@ -35,7 +27,7 @@ class SignupPendingView(generics.CreateAPIView):
         send_mail(
             subject="Confirme ton inscription sur Fessel Market",
             message=f"Clique sur ce lien pour activer ton compte : {activation_link}",
-            from_email=djoser_settings.DEFAULT_FROM_EMAIL,
+            from_email="no-reply@fesselmarket.com",
             recipient_list=[email],
             fail_silently=False,
         )
@@ -54,30 +46,23 @@ class ActivatePendingUserView(generics.GenericAPIView):
             return Response({"error": "Lien invalide ou expiré"}, status=400)
 
         User = get_user_model()
-        if User.objects.filter(email=pending.email).exists():
-            pending.delete()
-            return Response({"detail": "Compte déjà activé"}, status=200)
+        user = User.objects.create_user(email=pending.email, password=pending.password)
+        user.is_active = True
+        user.email_verified = True
+        user.save()
 
-        user = User.objects.create_user(
-            email=pending.email,
-            password=pending.password,
-            is_active=True  # ✅ Compte activé automatiquement
-        )
         pending.delete()
         return Response({"detail": "Compte activé, tu peux maintenant te connecter"})
 
 
 # -------------------------
-# Login JWT custom (connexion sans activation obligatoire)
+# Login JWT personnalisé
 # -------------------------
 class LoginJWTView(generics.GenericAPIView):
     def post(self, request, *args, **kwargs):
         User = get_user_model()
         email = request.data.get("email")
         password = request.data.get("password")
-
-        if not email or not password:
-            return Response({"error": "Email et mot de passe requis."}, status=400)
 
         try:
             user = User.objects.get(email=email)
@@ -87,22 +72,13 @@ class LoginJWTView(generics.GenericAPIView):
         if not user.check_password(password):
             return Response({"error": "Mot de passe incorrect"}, status=400)
 
-        # ⚡ On permet la connexion même si le compte n’est pas activé
+        # 🔹 On ne bloque plus la connexion si is_active = False, juste email_verified pour info
+        if not user.email_verified:
+            return Response({"error": "Email non vérifié"}, status=400)
+
         refresh = RefreshToken.for_user(user)
         return Response({
             "refresh": str(refresh),
             "access": str(refresh.access_token),
-            "user": {
-                "email": user.email,
-                "id": user.id,
-            }
+            "user": {"email": user.email, "name": user.name}
         })
-
-
-# -------------------------
-# Reset Password via Djoser
-# (envoie email automatiquement via Djoser)
-# -------------------------
-# Tu n'as rien à coder ici, juste les URLs Djoser :
-# POST /auth/users/reset_password/  -> envoie email
-# POST /auth/users/reset_password_confirm/ -> confirme le reset
