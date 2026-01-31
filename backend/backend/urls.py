@@ -1,18 +1,16 @@
 from django.contrib import admin
 from django.urls import path, include
-from django.conf import settings
-from django.conf.urls.static import static
+from django.contrib import admin
+from django.urls import path, include
 
 urlpatterns = [
-    # Admin Django
-    path('admin/', admin.site.urls),
-    
-    # API endpoints
-    path('api/users/', include('users.urls')),
-    path('api/hotels/', include('hotels.urls')),
-    path('api/bookings/', include('bookings.urls')),
-]
+    path("admin/", admin.site.urls),
+    path("api/auth/", include("djoser.urls")),
+    path("api/auth/", include("djoser.urls.jwt")),
 
-# Media files (développement uniquement)
-if settings.DEBUG:
-    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+    # autres routes
+    path("api/", include("users.urls")),
+    path("api/", include("hotels.urls")),
+    path("api/", include("bookings.urls")),
+]
