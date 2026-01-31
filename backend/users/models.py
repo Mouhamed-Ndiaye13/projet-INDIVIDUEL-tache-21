@@ -31,19 +31,17 @@ class UserManager(BaseUserManager):
 # -------------------------
 class User(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(unique=True)
-    first_name = models.CharField(max_length=50, blank=True)
-    last_name = models.CharField(max_length=50, blank=True)
-    is_active = models.BooleanField(default=False)
-    is_staff = models.BooleanField(default=False)
-    date_joined = models.DateTimeField(default=timezone.now)
+    name = models.CharField(max_length=255)
 
-    objects = UserManager()
+    is_active = models.BooleanField(default=True)   # ✅ TOUJOURS TRUE
+    is_staff = models.BooleanField(default=False)
+
+    email_verified = models.BooleanField(default=False)  # 🔥 clé ici
+
+    date_joined = models.DateTimeField(auto_now_add=True)
 
     USERNAME_FIELD = "email"
     REQUIRED_FIELDS = []
-
-    def __str__(self):
-        return self.email
 
 # -------------------------
 # PendingUser pour pré-inscription

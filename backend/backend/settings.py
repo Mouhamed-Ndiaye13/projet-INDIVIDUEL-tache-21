@@ -131,13 +131,22 @@ SIMPLE_JWT = {
 # Djoser Configuration
 # -------------------------
 DJOSER = {
-    "LOGIN_FIELD": "email",                      # login avec email
-    "USER_CREATE_PASSWORD_RETYPE": True,         # demander re_password
-    "SEND_ACTIVATION_EMAIL": True,               # ✅ envoi email activation signup
+    "LOGIN_FIELD": "email",
+    "USER_CREATE_PASSWORD_RETYPE": True,
+
+    # ✅ Email activation obligatoire
+    "SEND_ACTIVATION_EMAIL": True,
+
+    # ⚠️ mais on ne touche plus à is_active
+    "ACTIVATION_URL": "activate/{uid}/{token}/",
+
+    # ✅ Reset password par email
+    "PASSWORD_RESET_CONFIRM_URL": "reset-password-confirm/{uid}/{token}/",
+
+    # On n’utilise PAS confirmation email
     "SEND_CONFIRMATION_EMAIL": False,
-    "ACTIVATION_URL": "activate/{uid}/{token}/", # lien dans email activation
-    "PASSWORD_RESET_CONFIRM_URL": "reset-password-confirm/{uid}/{token}/", # lien reset
 }
+
 REST_USE_JWT = True
 
 # -------------------------

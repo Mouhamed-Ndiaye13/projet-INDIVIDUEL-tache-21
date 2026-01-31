@@ -5,6 +5,8 @@ from django.urls import reverse
 from django.contrib.auth import get_user_model
 from .models import PendingUser
 from rest_framework_simplejwt.tokens import RefreshToken
+from djoser.views import ActivationView
+
 
 # -------------------------
 # Pré-inscription : crée un PendingUser et envoie mail
@@ -79,3 +81,14 @@ class LoginJWTView(generics.GenericAPIView):
             "refresh": str(refresh),
             "access": str(refresh.access_token),
         })
+
+
+class CustomActivationView(ActivationView):
+    def post(self, request, *args, **kwargs):
+        response = super().post(request, *args, **kwargs)
+
+        user = self.user
+        user.email_verified = True
+        user.save()
+
+        return Response({"detail": "Email vérifié avec succès"})
