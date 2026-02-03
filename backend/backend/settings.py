@@ -1,12 +1,13 @@
-import dj_database_url
 from pathlib import Path
 import os
 from dotenv import load_dotenv
 from datetime import timedelta
+import dj_database_url
+from corsheaders.defaults import default_headers
 
-# -------------------------
-# Chargement des variables d'environnement
-# -------------------------
+# =========================
+# ENV
+# =========================
 load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -14,14 +15,18 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = os.getenv("SECRET_KEY", "dev_secret_key")
 DEBUG = os.getenv("DEBUG", "False") == "True"
 
-# -------------------------
-# Hosts
-# -------------------------
-ALLOWED_HOSTS = ["*"]
+# =========================
+# HOSTS
+# =========================
+ALLOWED_HOSTS = [
+    "projet-individuel-tache-21.onrender.com",
+    "localhost",
+    "127.0.0.1",
+]
 
-# -------------------------
-# Applications installées
-# -------------------------
+# =========================
+# APPS
+# =========================
 INSTALLED_APPS = [
     # Django
     "django.contrib.admin",
@@ -31,7 +36,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
 
-    # Third party
+    # Third-party
     "rest_framework",
     "rest_framework.authtoken",
     "corsheaders",
@@ -39,45 +44,60 @@ INSTALLED_APPS = [
     "cloudinary_storage",
     "cloudinary",
 
-    # Local apps
+    # Local
     "users",
     "hotels",
     "bookings",
 ]
 
-# -------------------------
-# Middleware
-# -------------------------
+# =========================
+# MIDDLEWARE (ORDRE CRITIQUE)
+# =========================
 MIDDLEWARE = [
     "django.middleware.security.SecurityMiddleware",
+
+    # CORS doit être en haut
     "corsheaders.middleware.CorsMiddleware",
     "django.middleware.common.CommonMiddleware",
-    "django.middleware.csrf.CsrfViewMiddleware",
+
+    # Sessions AVANT CSRF
     "django.contrib.sessions.middleware.SessionMiddleware",
+    "django.middleware.csrf.CsrfViewMiddleware",
+
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
 ]
 
-# -------------------------
-# CORS
-# -------------------------
+# =========================
+# CORS / CSRF
+# =========================
 CORS_ALLOW_ALL_ORIGINS = False
+
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "https://projet-individuel-tache-21.vercel.app",
 ]
+
 CORS_ALLOW_CREDENTIALS = True
 
-# -------------------------
-# URLs & WSGI
-# -------------------------
+CORS_ALLOW_HEADERS = list(default_headers) + [
+    "authorization",
+]
+
+CSRF_TRUSTED_ORIGINS = [
+    "https://projet-individuel-tache-21.vercel.app",
+]
+
+# =========================
+# URL / WSGI
+# =========================
 ROOT_URLCONF = "backend.urls"
 WSGI_APPLICATION = "backend.wsgi.application"
 
-# -------------------------
-# Templates (admin)
-# -------------------------
+# =========================
+# TEMPLATES
+# =========================
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
@@ -94,9 +114,9 @@ TEMPLATES = [
     },
 ]
 
-# -------------------------
-# Base de données PostgreSQL (Render)
-# -------------------------
+# =========================
+# DATABASE (POSTGRES RENDER)
+# =========================
 DATABASES = {
     "default": dj_database_url.parse(
         os.getenv("DATABASE_URL"),
@@ -105,25 +125,26 @@ DATABASES = {
     )
 }
 
-# ======================================================
-# 🔐 AUTHENTIFICATION (DJOSER + JWT)
-# ======================================================
+# =========================
+# AUTH / USER
+# =========================
+AUTH_USER_MODEL = "users.User"
 
-# -------------------------
-# Django REST Framework
-# -------------------------
+# =========================
+# DJANGO REST FRAMEWORK
+# =========================
 REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
     "DEFAULT_PERMISSION_CLASSES": (
-        "rest_framework.permissions.AllowAny",
+        "rest_framework.permissions.IsAuthenticated",
     ),
 }
 
-# -------------------------
-# JWT Configuration
-# -------------------------
+# =========================
+# JWT
+# =========================
 SIMPLE_JWT = {
     "AUTH_HEADER_TYPES": ("Bearer",),
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),
@@ -132,22 +153,20 @@ SIMPLE_JWT = {
     "SIGNING_KEY": SECRET_KEY,
 }
 
-# -------------------------
-# DJOSER CONFIGURATION (CORE 🔥)
-# -------------------------
+# =========================
+# DJOSER (AUTH 🔥)
+# =========================
 DJOSER = {
     "LOGIN_FIELD": "email",
     "USER_CREATE_PASSWORD_RETYPE": True,
 
     # Activation par email
     "SEND_ACTIVATION_EMAIL": True,
-    # Lien complet vers le frontend Vercel
     "ACTIVATION_URL": "https://projet-individuel-tache-21.vercel.app/activate/{uid}/{token}/",
 
     # Reset password
-    "PASSWORD_RESET_CONFIRM_URL": "https://projet-individuel-tache-21.vercel.app/reset-password/{uid}/{token}/",
+    "PASSWORD_RESET_CONFIRM_URL": "https://projet-individuel-tache-21.vercel.app/reset-password-confirm/{uid}/{token}/",
 
-    # Serializers custom
     "SERIALIZERS": {
         "user_create": "users.serializers.UserCreateSerializer",
         "user": "users.serializers.UserSerializer",
@@ -155,49 +174,41 @@ DJOSER = {
     },
 }
 
-
-
-# -------------------------
-# Email (SMTP)
-# -------------------------
+# =========================
+# EMAIL (SMTP)
+# =========================
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.gmail.com")
 EMAIL_PORT = int(os.getenv("EMAIL_PORT", 587))
 EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True") == "True"
-EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
-EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
+
 DEFAULT_FROM_EMAIL = os.getenv(
     "DEFAULT_FROM_EMAIL",
     "no-reply@fesselmarket.com"
 )
 
-# -------------------------
-# Cloudinary Configuration
-# -------------------------
+# =========================
+# CLOUDINARY
+# =========================
 CLOUDINARY_STORAGE = {
     "CLOUD_NAME": os.getenv("CLOUDINARY_CLOUD_NAME"),
     "API_KEY": os.getenv("CLOUDINARY_API_KEY"),
     "API_SECRET": os.getenv("CLOUDINARY_API_SECRET"),
 }
 
-# -------------------------
-# Media & Storage
-# -------------------------
-MEDIA_URL = "/media/"
 DEFAULT_FILE_STORAGE = "cloudinary_storage.storage.MediaCloudinaryStorage"
 
-# -------------------------
-# Static files
-# -------------------------
+MEDIA_URL = "/media/"
+
+# =========================
+# STATIC
+# =========================
 STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
-# -------------------------
-# Default primary key
-# -------------------------
+# =========================
+# DEFAULT PK
+# =========================
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
-
-# -------------------------
-# Custom User
-# -------------------------
-AUTH_USER_MODEL = "users.User"
