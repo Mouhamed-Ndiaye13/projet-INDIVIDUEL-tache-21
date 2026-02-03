@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate, Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import api from "../services/api";
 
 export default function Login() {
@@ -7,15 +7,11 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-
   const navigate = useNavigate();
 
-  // ⚡ Redirection si déjà connecté
   useEffect(() => {
     const token = localStorage.getItem("token");
-    if (token) {
-      navigate("/dashboard", { replace: true });
-    }
+    if (token) navigate("/dashboard", { replace: true });
   }, [navigate]);
 
   const handleSubmit = async (e) => {
@@ -29,35 +25,31 @@ export default function Login() {
 
     try {
       setLoading(true);
-      const res = await api.post("/users/login/", { email, password });
-
-      // 🔐 Sauvegarde token + user
-      localStorage.setItem("token", res.data.token);
-      localStorage.setItem("user", JSON.stringify(res.data.user));
-
-      // 🔑 Redirection vers dashboard avec replace: true
+      const res = await api.post("/auth/jwt/create/", { email, password });
+      localStorage.setItem("token", res.data.access);
+      localStorage.setItem("user", JSON.stringify({ email }));
       navigate("/dashboard", { replace: true });
     } catch (err) {
-      setError(
-        err.response?.data?.error || "Erreur lors de la connexion"
-      );
+      const messages = Object.values(err.response?.data || {}).flat().join(" ");
+      setError(messages || "Erreur lors de la connexion");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0b0f1a] to-[#0f172a]">
-      <div className="w-full max-w-md bg-white/10 backdrop-blur-xl p-8 rounded-2xl">
-        <h1 className="text-3xl font-bold text-white text-center mb-6">
+    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0b0f1a] to-[#0f172a] relative overflow-hidden">
+      <div className="absolute -top-32 -left-32 w-96 h-96 bg-cyan-400/20 blur-3xl rounded-full" />
+      <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-violet-500/20 blur-3xl rounded-full" />
+
+      <div className="relative z-10 w-full max-w-md bg-white/10 backdrop-blur-xl border border-white/10 rounded-2xl shadow-[0_0_40px_rgba(0,0,0,0.6)] p-8">
+        <h1 className="text-3xl font-extrabold text-center text-white tracking-wide mb-8">
           Connexion
         </h1>
 
-        {error && (
-          <p className="text-red-400 text-sm text-center mb-4">{error}</p>
-        )}
+        {error && <p className="text-red-400 text-sm text-center mb-4">{error}</p>}
 
-        <form className="space-y-4" onSubmit={handleSubmit}>
+        <form className="space-y-6" onSubmit={handleSubmit}>
           <input
             type="email"
             placeholder="Email"
@@ -73,12 +65,8 @@ export default function Login() {
             className="w-full px-4 py-3 rounded-xl bg-white/10 text-white border border-white/20 placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-cyan-400/60 transition"
           />
 
-          {/* Lien Mot de passe oublié */}
           <div className="text-right">
-            <Link
-              to="/forgot-password"
-              className="text-cyan-400 hover:underline text-sm"
-            >
+            <Link to="/forgot-password" className="text-cyan-400 hover:underline text-sm">
               Mot de passe oublié ?
             </Link>
           </div>
@@ -86,7 +74,7 @@ export default function Login() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 rounded-xl font-semibold bg-gradient-to-r from-cyan-400 to-violet-500 text-white hover:shadow-lg transition disabled:opacity-50"
+            className="w-full py-3 rounded-xl font-semibold tracking-wide bg-gradient-to-r from-cyan-400 to-violet-500 text-white hover:shadow-[0_0_30px_rgba(56,189,248,0.8)] hover:scale-[1.02] transition-all duration-300 disabled:opacity-50"
           >
             {loading ? "Connexion..." : "Se connecter"}
           </button>
