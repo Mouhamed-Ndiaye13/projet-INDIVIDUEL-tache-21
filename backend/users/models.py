@@ -1,63 +1,51 @@
-from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
-from django.db import models
-from django.utils import timezone
 import uuid
+from django.db import models
+from django.contrib.auth.models import AbstractBaseUser, BaseUserManager, PermissionsMixin
+from django.utils import timezone
 
 # -------------------------
-# User Manager personnalisé
+# Custom User
 # -------------------------
 class UserManager(BaseUserManager):
-    def create_user(self, email, password=None, **extra_fields):
+    def create_user(self, email, password=None, name="", **extra_fields):
         if not email:
-            raise ValueError("L'utilisateur doit avoir un email")
+            raise ValueError("Email requis")
         email = self.normalize_email(email)
-        user = self.model(email=email, **extra_fields)
+        user = self.model(email=email, name=name, **extra_fields)
         user.set_password(password)
+        user.is_active = True
         user.save(using=self._db)
         return user
 
-    def create_superuser(self, email, password, **extra_fields):
+    def create_superuser(self, email, password, name="", **extra_fields):
         extra_fields.setdefault("is_staff", True)
         extra_fields.setdefault("is_superuser", True)
-        extra_fields.setdefault("is_active", True)
-        if extra_fields.get("is_staff") is not True:
-            raise ValueError("Superuser doit avoir is_staff=True")
-        if extra_fields.get("is_superuser") is not True:
-            raise ValueError("Superuser doit avoir is_superuser=True")
-        return self.create_user(email, password, **extra_fields)
+        return self.create_user(email, password, name, **extra_fields)
 
-
-# -------------------------
-# Modèle User personnalisé
-# -------------------------
 class User(AbstractBaseUser, PermissionsMixin):
     email = models.EmailField(unique=True)
-    name = models.CharField(max_length=255, blank=True)
-
-    is_active = models.BooleanField(default=True)   # toujours True
+    name = models.CharField(max_length=255)
+    is_active = models.BooleanField(default=False)
     is_staff = models.BooleanField(default=False)
-
-    email_verified = models.BooleanField(default=False)  # clé pour activation
-
-    date_joined = models.DateTimeField(auto_now_add=True)
-
-    USERNAME_FIELD = "email"
-    REQUIRED_FIELDS = []
+    date_joined = models.DateTimeField(default=timezone.now)
 
     objects = UserManager()
 
+    USERNAME_FIELD = "email"
+    REQUIRED_FIELDS = ["name"]
+
     def __str__(self):
         return self.email
 
-
 # -------------------------
-# PendingUser pour pré-inscription
+# PendingUser pour activation
 # -------------------------
 class PendingUser(models.Model):
     email = models.EmailField(unique=True)
-    password = models.CharField(max_length=128)
-    token = models.UUIDField(default=uuid.uuid4, editable=False, unique=True)
-    created_at = models.DateTimeField(default=timezone.now)
+    name = models.CharField(max_length=255, blank=True)
+    password = models.CharField(max_length=255)  # déjà hashé
+    token = models.UUIDField(default=uuid.uuid4, unique=True)
+    created_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
-        return self.email
+        return f"{self.email} (pending)"

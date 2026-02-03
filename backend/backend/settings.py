@@ -36,10 +36,10 @@ INSTALLED_APPS = [
     "rest_framework.authtoken",
     "corsheaders",
     "djoser",
-    "cloudinary_storage",  # ⚠️ doit être AVANT staticfiles
+    "cloudinary_storage",
     "cloudinary",
 
-    # Your apps
+    # Local apps
     "users",
     "hotels",
     "bookings",
@@ -105,6 +105,10 @@ DATABASES = {
     )
 }
 
+# ======================================================
+# 🔐 AUTHENTIFICATION (DJOSER + JWT)
+# ======================================================
+
 # -------------------------
 # Django REST Framework
 # -------------------------
@@ -112,7 +116,6 @@ REST_FRAMEWORK = {
     "DEFAULT_AUTHENTICATION_CLASSES": (
         "rest_framework_simplejwt.authentication.JWTAuthentication",
     ),
-    # ⚡ Pour que signup/login/reset password soient accessibles sans token
     "DEFAULT_PERMISSION_CLASSES": (
         "rest_framework.permissions.AllowAny",
     ),
@@ -125,40 +128,48 @@ SIMPLE_JWT = {
     "AUTH_HEADER_TYPES": ("Bearer",),
     "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),
     "REFRESH_TOKEN_LIFETIME": timedelta(days=1),
+    "UPDATE_LAST_LOGIN": True,
+    "SIGNING_KEY": SECRET_KEY,
 }
 
 # -------------------------
-# Djoser Configuration
+# DJOSER CONFIGURATION (CORE 🔥)
 # -------------------------
 DJOSER = {
     "LOGIN_FIELD": "email",
     "USER_CREATE_PASSWORD_RETYPE": True,
 
-    # ✅ Email activation obligatoire
+    # Activation par email
     "SEND_ACTIVATION_EMAIL": True,
+    # Lien complet vers le frontend Vercel
+    "ACTIVATION_URL": "https://projet-individuel-tache-21.vercel.app/activate/{uid}/{token}/",
 
-    # ⚠️ mais on ne touche plus à is_active
-    "ACTIVATION_URL": "activate/{uid}/{token}/",
+    # Reset password
+    "PASSWORD_RESET_CONFIRM_URL": "https://projet-individuel-tache-21.vercel.app/reset-password/{uid}/{token}/",
 
-    # ✅ Reset password par email
-    "PASSWORD_RESET_CONFIRM_URL": "reset-password-confirm/{uid}/{token}/",
-
-    # On n’utilise PAS confirmation email
-    "SEND_CONFIRMATION_EMAIL": False,
+    # Serializers custom
+    "SERIALIZERS": {
+        "user_create": "users.serializers.UserCreateSerializer",
+        "user": "users.serializers.UserSerializer",
+        "current_user": "users.serializers.UserSerializer",
+    },
 }
 
-REST_USE_JWT = True
+
 
 # -------------------------
-# Email (SMTP) pour production
+# Email (SMTP)
 # -------------------------
 EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-EMAIL_HOST = os.getenv("EMAIL_HOST")                     # ex: smtp.gmail.com
+EMAIL_HOST = os.getenv("EMAIL_HOST", "smtp.gmail.com")
 EMAIL_PORT = int(os.getenv("EMAIL_PORT", 587))
 EMAIL_USE_TLS = os.getenv("EMAIL_USE_TLS", "True") == "True"
-EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")           # ton email
-EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")   # mot de passe app
-DEFAULT_FROM_EMAIL = os.getenv("DEFAULT_FROM_EMAIL", "no-reply@fesselmarket.com")
+EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD", "")
+DEFAULT_FROM_EMAIL = os.getenv(
+    "DEFAULT_FROM_EMAIL",
+    "no-reply@fesselmarket.com"
+)
 
 # -------------------------
 # Cloudinary Configuration
