@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { useParams, Link } from "react-router-dom";
+import { useParams, useNavigate } from "react-router-dom";
 import api from "../services/api";
 
 export default function ResetPasswordConfirm() {
@@ -9,10 +9,11 @@ export default function ResetPasswordConfirm() {
   const [message, setMessage] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    setError("");
+    setError(""); 
     setMessage("");
 
     if (!password || !confirm) {
@@ -26,20 +27,22 @@ export default function ResetPasswordConfirm() {
 
     try {
       setLoading(true);
-      // Djoser attend password et re_password pour certains backends
-      await api.post("/auth/users/reset_password_confirm/", { uid, token, new_password: password });
+      await api.post(`/auth/users/reset_password_confirm/`, {
+        uid,
+        token,
+        new_password: password,
+      });
+
       setMessage("Mot de passe réinitialisé avec succès !");
-      setPassword("");
+      setPassword(""); 
       setConfirm("");
-    } catch (err) {
-      if (err.response?.data) {
-        const messages = Object.values(err.response.data)
-          .flat()
-          .join(" ");
-        setError(messages || "Lien invalide ou expiré");
-      } else {
-        setError("Lien invalide ou expiré");
-      }
+
+      // Redirige vers login après 3 secondes
+      setTimeout(() => {
+        navigate("/", { replace: true });
+      }, 3000);
+    } catch {
+      setError("Lien invalide ou expiré");
     } finally {
       setLoading(false);
     }
@@ -47,14 +50,15 @@ export default function ResetPasswordConfirm() {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-[#0b0f1a] to-[#0f172a] relative overflow-hidden">
-      <div className="absolute -top-32 -left-32 w-96 h-96 bg-cyan-400/20 blur-3xl rounded-full" />
-      <div className="absolute -bottom-32 -right-32 w-96 h-96 bg-violet-500/20 blur-3xl rounded-full" />
-
-      <div className="relative z-10 w-full max-w-md bg-white/10 backdrop-blur-xl p-8 rounded-2xl text-center text-white">
+      <div className="w-full max-w-md bg-white/10 backdrop-blur-xl p-8 rounded-2xl text-center text-white">
         <h1 className="text-3xl font-bold mb-6">Réinitialiser le mot de passe</h1>
 
         {error && <p className="text-red-400 mb-4">{error}</p>}
-        {message && <p className="text-green-400 mb-4">{message}</p>}
+        {message && (
+          <p className="text-green-400 mb-4">
+            {message} Vous serez redirigé vers la connexion...
+          </p>
+        )}
 
         <form className="space-y-4" onSubmit={handleSubmit}>
           <input
@@ -79,10 +83,6 @@ export default function ResetPasswordConfirm() {
             {loading ? "Réinitialisation..." : "Réinitialiser"}
           </button>
         </form>
-
-        <Link to="/" className="block mt-6 text-cyan-400 hover:underline">
-          Retour à la connexion
-        </Link>
       </div>
     </div>
   );

@@ -27,7 +27,7 @@ export default function Register() {
     try {
       setLoading(true);
       await api.post("/auth/users/", { email, password, re_password: confirm });
-      alert("Email envoyé pour confirmation. Vérifiez votre boîte mail !");
+      alert("Email d'activation envoyé ! Vérifiez votre boîte mail.");
       navigate("/", { replace: true });
     } catch (err) {
       const messages = Object.values(err.response?.data || {}).flat().join(" ");
@@ -75,7 +75,7 @@ export default function Register() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 rounded-xl font-semibold tracking-wide bg-gradient-to-r from-cyan-400 to-violet-500 text-white hover:shadow-[0_0_30px_rgba(56,189,248,0.8)] hover:scale-[1.02] transition-all duration-300 disabled:opacity-50"
+            className="w-full py-3 rounded-xl font-semibold tracking-wide bg-gradient-to-r from-cyan-400 to-violet-500 text-white hover:shadow-lg hover:scale-[1.02] transition-all duration-300 disabled:opacity-50"
           >
             {loading ? "Inscription..." : "S’inscrire"}
           </button>

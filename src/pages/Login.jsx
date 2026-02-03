@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import api from "../services/api";
 
@@ -7,16 +7,8 @@ export default function Login() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
 
-  useEffect(() => {
-    const token = localStorage.getItem("token");
-    // ⚡ On ne redirige que si le token existe ET qu'il est valide
-    if (token) {
-      // Optionnel: on peut tester la validité avec une requête ping ou decode JWT
-      navigate("/dashboard", { replace: true });
-    }
-  }, [navigate]);
+  const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -29,17 +21,28 @@ export default function Login() {
 
     try {
       setLoading(true);
-
       const res = await api.post("/auth/jwt/create/", { email, password });
 
-      // 🔹 Stockage du token
-      localStorage.setItem("token", res.data.access);
-      localStorage.setItem("user", JSON.stringify({ email }));
+      // Récupère le token et l'état actif de l'utilisateur
+      const access = res.data.access;
+      const userRes = await api.get("/auth/users/me/", {
+        headers: { Authorization: `Bearer ${access}` },
+      });
 
-      // 🔹 Redirection vers dashboard uniquement après succès login
+      localStorage.setItem("token", access);
+      localStorage.setItem("user", JSON.stringify({
+        email: userRes.data.email,
+        is_active: userRes.data.is_active,
+      }));
+
+      if (!userRes.data.is_active) {
+        alert("Veuillez activer votre compte via le mail envoyé !");
+        navigate("/", { replace: true });
+        return;
+      }
+
       navigate("/dashboard", { replace: true });
     } catch (err) {
-      // 🔹 Messages d'erreur Djoser + JWT
       const messages = Object.values(err.response?.data || {}).flat().join(" ");
       setError(messages || "Erreur lors de la connexion");
     } finally {
@@ -84,7 +87,7 @@ export default function Login() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 rounded-xl font-semibold tracking-wide bg-gradient-to-r from-cyan-400 to-violet-500 text-white hover:shadow-[0_0_30px_rgba(56,189,248,0.8)] hover:scale-[1.02] transition-all duration-300 disabled:opacity-50"
+            className="w-full py-3 rounded-xl font-semibold tracking-wide bg-gradient-to-r from-cyan-400 to-violet-500 text-white hover:shadow-lg hover:scale-[1.02] transition-all duration-300 disabled:opacity-50"
           >
             {loading ? "Connexion..." : "Se connecter"}
           </button>

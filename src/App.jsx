@@ -34,6 +34,9 @@ function App() {
           <Route path="/dashboard" element={<Dashboard />} />
           <Route path="/hotels" element={<Hotels />} />
         </Route>
+
+        {/* 🔄 Catch-all pour rediriger les URLs inconnues vers login */}
+        <Route path="*" element={<Login />} />
       </Routes>
     </Router>
   );
