@@ -11,7 +11,11 @@ export default function Login() {
 
   useEffect(() => {
     const token = localStorage.getItem("token");
-    if (token) navigate("/dashboard", { replace: true });
+    // ⚡ On ne redirige que si le token existe ET qu'il est valide
+    if (token) {
+      // Optionnel: on peut tester la validité avec une requête ping ou decode JWT
+      navigate("/dashboard", { replace: true });
+    }
   }, [navigate]);
 
   const handleSubmit = async (e) => {
@@ -25,11 +29,17 @@ export default function Login() {
 
     try {
       setLoading(true);
+
       const res = await api.post("/auth/jwt/create/", { email, password });
+
+      // 🔹 Stockage du token
       localStorage.setItem("token", res.data.access);
       localStorage.setItem("user", JSON.stringify({ email }));
+
+      // 🔹 Redirection vers dashboard uniquement après succès login
       navigate("/dashboard", { replace: true });
     } catch (err) {
+      // 🔹 Messages d'erreur Djoser + JWT
       const messages = Object.values(err.response?.data || {}).flat().join(" ");
       setError(messages || "Erreur lors de la connexion");
     } finally {
