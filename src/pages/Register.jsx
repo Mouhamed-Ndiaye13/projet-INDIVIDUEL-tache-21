@@ -3,6 +3,7 @@ import { Link, useNavigate } from "react-router-dom";
 import api from "../services/api";
 
 export default function Register() {
+  const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirm, setConfirm] = useState("");
@@ -15,10 +16,11 @@ export default function Register() {
     e.preventDefault();
     setError("");
 
-    if (!email || !password || !confirm) {
+    if (!name || !email || !password || !confirm) {
       setError("Veuillez remplir tous les champs");
       return;
     }
+
     if (password !== confirm) {
       setError("Les mots de passe ne correspondent pas");
       return;
@@ -26,10 +28,16 @@ export default function Register() {
 
     try {
       setLoading(true);
-      await api.post("/auth/users/", { email, password, re_password: confirm });
-      alert("Email d'activation envoyé ! Vérifiez votre boîte mail.");
-      navigate("/", { replace: true });
+      await api.post("/auth/users/", {
+        name,
+        email,
+        password,
+        re_password: confirm,
+      });
+      alert("Email envoyé pour confirmation. Vérifiez votre boîte mail !");
+      navigate("/", { replace: true }); // redirection vers login
     } catch (err) {
+      // On récupère toutes les erreurs envoyées par Djoser
       const messages = Object.values(err.response?.data || {}).flat().join(" ");
       setError(messages || "Erreur lors de l’inscription");
     } finally {
@@ -51,31 +59,38 @@ export default function Register() {
 
         <form className="space-y-6" onSubmit={handleSubmit}>
           <input
+            type="text"
+            placeholder="Nom complet"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className="w-full px-4 py-3 rounded-xl bg-white/10 text-white border border-white/20 placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-cyan-400/60 focus:border-cyan-400 transition"
+          />
+          <input
             type="email"
             placeholder="Email"
             value={email}
             onChange={(e) => setEmail(e.target.value)}
-            className="w-full px-4 py-3 rounded-xl bg-white/10 text-white border border-white/20 placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-cyan-400/60 transition"
+            className="w-full px-4 py-3 rounded-xl bg-white/10 text-white border border-white/20 placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-cyan-400/60 focus:border-cyan-400 transition"
           />
           <input
             type="password"
             placeholder="Mot de passe"
             value={password}
             onChange={(e) => setPassword(e.target.value)}
-            className="w-full px-4 py-3 rounded-xl bg-white/10 text-white border border-white/20 placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-cyan-400/60 transition"
+            className="w-full px-4 py-3 rounded-xl bg-white/10 text-white border border-white/20 placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-cyan-400/60 focus:border-cyan-400 transition"
           />
           <input
             type="password"
             placeholder="Confirmer le mot de passe"
             value={confirm}
             onChange={(e) => setConfirm(e.target.value)}
-            className="w-full px-4 py-3 rounded-xl bg-white/10 text-white border border-white/20 placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-cyan-400/60 transition"
+            className="w-full px-4 py-3 rounded-xl bg-white/10 text-white border border-white/20 placeholder-white/40 focus:outline-none focus:ring-2 focus:ring-cyan-400/60 focus:border-cyan-400 transition"
           />
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full py-3 rounded-xl font-semibold tracking-wide bg-gradient-to-r from-cyan-400 to-violet-500 text-white hover:shadow-lg hover:scale-[1.02] transition-all duration-300 disabled:opacity-50"
+            className="w-full py-3 rounded-xl font-semibold tracking-wide bg-gradient-to-r from-cyan-400 to-violet-500 text-white hover:shadow-[0_0_30px_rgba(56,189,248,0.8)] hover:scale-[1.02] transition-all duration-300 disabled:opacity-50"
           >
             {loading ? "Inscription..." : "S’inscrire"}
           </button>
